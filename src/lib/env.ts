@@ -3,6 +3,13 @@ import { z } from 'zod';
 
 // Server-side environment. Importing this from a Client Component is a build
 // error, which is the point: secrets cannot leak into the bundle.
+//
+// Validation is LAZY — it runs on first property access, not at import.
+// Building the app should not require production secrets: `next build` imports
+// every route module to collect page data, so eager validation made a build
+// impossible without a full secret set. The check itself is unchanged and still
+// throws loudly; it simply happens when a request actually needs a value.
+
 const schema = z.object({
   DATABASE_URL: z.string().url(),
 
@@ -29,27 +36,55 @@ const schema = z.object({
   OPERATOR_EMAILS: z.string().default(''),
 });
 
-const parsed = schema.safeParse(process.env);
+export type Env = z.infer<typeof schema>;
 
-if (!parsed.success) {
-  const issues = parsed.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
-  throw new Error(`Invalid server environment:\n${issues}`);
-}
+let cached: Env | null = null;
 
-export const env = parsed.data;
+function load(): Env {
+  if (cached) return cached;
 
-export const operatorEmails = env.OPERATOR_EMAILS.split(',')
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-/**
- * A LIVE Nigerian funding leg must name a real partner and account, or the UI
- * would show an empty "real" collection account. Fail at boot instead.
- */
-if (env.NGN_FUNDING_MODE === 'LIVE') {
-  if (!env.NGN_PARTNER_NAME || !env.NGN_PARTNER_BANK || !env.NGN_PARTNER_ACCOUNT) {
+  const parsed = schema.safeParse(process.env);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(
-      'NGN_FUNDING_MODE=LIVE requires NGN_PARTNER_NAME, NGN_PARTNER_BANK and NGN_PARTNER_ACCOUNT.',
+      `Invalid server environment:\n${issues}\n\n` +
+        'Set these in .env.local for local development, or in the hosting ' +
+        'provider for a deployment. See .env.example.',
     );
   }
+
+  // A LIVE Nigerian funding leg must name a real partner and account, or the UI
+  // would render an empty "real" collection account. Fail rather than show one.
+  if (parsed.data.NGN_FUNDING_MODE === 'LIVE') {
+    const { NGN_PARTNER_NAME, NGN_PARTNER_BANK, NGN_PARTNER_ACCOUNT } = parsed.data;
+    if (!NGN_PARTNER_NAME || !NGN_PARTNER_BANK || !NGN_PARTNER_ACCOUNT) {
+      throw new Error(
+        'NGN_FUNDING_MODE=LIVE requires NGN_PARTNER_NAME, NGN_PARTNER_BANK and NGN_PARTNER_ACCOUNT.',
+      );
+    }
+  }
+
+  cached = parsed.data;
+  return cached;
+}
+
+/** Validated server environment. Reading any property validates on first use. */
+export const env = new Proxy({} as Env, {
+  get: (_t, prop: string) => load()[prop as keyof Env],
+  has: (_t, prop: string) => prop in load(),
+  ownKeys: () => Reflect.ownKeys(load()),
+  getOwnPropertyDescriptor: (_t, prop: string) =>
+    Object.getOwnPropertyDescriptor(load(), prop) ?? {
+      configurable: true,
+      enumerable: true,
+      value: load()[prop as keyof Env],
+    },
+});
+
+/** Emails granted the OPERATOR role at sign-in. Read at call time, not import. */
+export function operatorEmails(): string[] {
+  return load()
+    .OPERATOR_EMAILS.split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 }

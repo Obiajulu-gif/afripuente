@@ -1,4 +1,4 @@
-import 'server-only';
+﻿import 'server-only';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/lib/env';
@@ -11,7 +11,11 @@ import { db, withDbRetry } from '@/lib/db';
 const COOKIE_NAME = 'afripuente_session';
 const MAX_AGE_SECONDS = 60 * 60 * 8;
 
-const secret = new TextEncoder().encode(env.SESSION_SECRET);
+// Read at call time, not at import: touching env during module evaluation would
+// make the whole module require a full secret set just to be imported.
+function sessionSecret(): Uint8Array {
+  return new TextEncoder().encode(env.SESSION_SECRET);
+}
 
 export interface SessionUser {
   id: string;
@@ -25,7 +29,7 @@ export async function createSession(userId: string): Promise<void> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(secret);
+    .sign(sessionSecret());
 
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
@@ -54,7 +58,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   let userId: string;
   try {
-    const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
+    const { payload } = await jwtVerify(token, sessionSecret(), { algorithms: ['HS256'] });
     if (typeof payload.sub !== 'string') return null;
     userId = payload.sub;
   } catch {

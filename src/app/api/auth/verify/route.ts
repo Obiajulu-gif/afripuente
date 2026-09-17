@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import { db } from '@/lib/db';
 import { env, operatorEmails } from '@/lib/env';
 import { ok, parseBody, toErrorResponse, fail } from '@/lib/api';
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     const email = body.email?.toLowerCase() ?? null;
     // The operator allowlist is configuration, applied server-side. A client
     // can never assert its own role.
-    const role = email && operatorEmails.includes(email) ? 'OPERATOR' : 'SENDER';
+    const role = email && operatorEmails().includes(email) ? 'OPERATOR' : 'SENDER';
 
     const user = await db.user.upsert({
       where: { pollarUserId: body.pollarUserId },
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
         actorUserId: user.id,
         action: 'auth.wallet_verified',
         // Address is truncated; no PII or full credentials in the audit log.
-        metadata: { address: `${body.address.slice(0, 4)}…${body.address.slice(-4)}`, network: body.network },
+        metadata: { address: `${body.address.slice(0, 4)}â€¦${body.address.slice(-4)}`, network: body.network },
       },
     });
 
