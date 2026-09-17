@@ -22,6 +22,10 @@ const schema = z.object({
   NGN_PER_USD_INDICATIVE: z.string().regex(/^\d+(\.\d+)?$/, 'must be a decimal string'),
   NGN_FUNDING_FEE_BPS: z.coerce.number().int().min(0).max(10_000),
 
+  /// Indicative BOB per 1 USDC, used ONLY to show an estimate before a real
+  /// provider quote exists. A provider quote always overrides it.
+  BOB_PER_USD_INDICATIVE: z.string().regex(/^\d+(\.\d+)?$/, 'must be a decimal string'),
+
   OPERATOR_EMAILS: z.string().default(''),
 });
 

@@ -178,14 +178,35 @@ Probed on 2026-09-17 against `https://sdk.api.pollar.xyz` using this project's o
 | --- | --- | --- |
 | `GET /ramps/countries` with **secret** key | `403 API_KEY_TYPE_NOT_ALLOWED` | Ramp endpoints reject secret keys by type |
 | `GET /ramps/countries` with **PAT** | `403 API_KEY_TYPE_NOT_ALLOWED` | Same |
-| `GET /ramps/countries` with **publishable** key | `403 ORIGIN_NOT_ALLOWED` | Key is valid; **origin allowlist** is the gate |
+| `GET /ramps/countries` with **publishable** key, unregistered origin | `403 ORIGIN_NOT_ALLOWED` | Origin allowlist is enforced |
+| `GET /ramps/countries` with **publishable** key, registered origin | `401 SDK_AUTH_INVALID_TOKEN` | Origin passes; a **user session** is still required |
 | `GET /ramps/countries` (no `/v2` prefix) | `404` | Confirms `/v2` is the live prefix |
+| **`GET /applications/config`, registered origin** | **`200`** | **Live, successful authenticated call — see below** |
+| `OPTIONS` preflight, registered origin | `204`, `Access-Control-Allow-Origin` echoes the origin | Browser CORS is driven by the same allowlist |
+
+### Confirmed-live app configuration
+
+`GET /v2/applications/config` returns our real application record:
+
+```json
+{ "content": { "application": { "name": "AfriPuente", "network": "testnet", "chains": ["STELLAR"] } } }
+```
+
+This is a genuine authenticated response from Pollar for this project's own application id, on
+Stellar testnet. It is the first end-to-end proof that the SDK, the key and the origin
+configuration are correct.
 
 **Conclusion:** ramp calls are *user-context* calls made with the **publishable** key from an
 allowlisted browser origin, carrying a DPoP-signed user session. They are not server-to-server
 calls made with the secret key. This shaped the architecture: the ramp quote/creation calls run in
 the browser through the SDK under the user's own authenticated session, while our server holds the
 authoritative transfer record and verifies every result independently.
+
+> **Important subtlety.** A Node script that sets an `Origin` header is *not* a CORS test — CORS is
+> enforced by the browser, not the server. During development a Node probe reported `401`
+> (looking "allowed") while the browser was still failing with a missing
+> `Access-Control-Allow-Origin`. Both must be checked. `scripts/verify-pollar.ts` checks the
+> server side; the browser side is confirmed by loading the app and reading the console.
 
 ---
 
@@ -217,8 +238,8 @@ therefore an AfriPuente-owned adapter with a documented semi-manual partner flow
 
 | Item | Status | Exact blocker |
 | --- | --- | --- |
-| Live `GET /ramps/countries` response | **BLOCKED** | `403 ORIGIN_NOT_ALLOWED`. Fix: dashboard.pollar.xyz → **Build → Domains** → add the app origin. Until then no live ramp call can run from this app. |
-| Live BOB quote (`country=BO, currency=BOB`) | **BLOCKED** | Same origin gate. Corridor is documented but **the live quote has not yet been observed**. |
+| Live `GET /ramps/countries` response | **BLOCKED** | `401 SDK_AUTH_INVALID_TOKEN` — needs an authenticated user session. Requires completing the email-OTP login in a browser; cannot be reproduced from a script. |
+| Live BOB quote (`country=BO, currency=BOB`) | **BLOCKED** | Same user-session gate. The corridor is documented and the origin/key are proven correct, but **the live quote has not yet been observed**. |
 | Exact `requiredFields` for Bolivia/Stereum | **UNVERIFIED** | Only observable from a live quote. This is why the recipient form is generated from the response rather than hardcoded. |
 | Testnet vs mainnet ramp availability | **UNVERIFIED** | Real anchors may not operate on testnet. A testnet settlement proves the Stellar leg, **not** a redeemable BOB payout. |
 | USDC issuer on Stellar testnet | **UNVERIFIED** | Must be read from the app's enabled assets (`refreshAssets()`), never hardcoded from a symbol match. |

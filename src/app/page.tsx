@@ -1,69 +1,104 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { ArrowRight, Banknote, ShieldCheck, Landmark } from 'lucide-react';
+import { Badge, Button, Card } from '@/components/ui';
 
-export default function Home() {
+// Landing page. No customer counts, testimonials, savings claims or volumes —
+// none of those exist, so none are shown.
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+      <header className="mb-10">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg font-semibold tracking-tight">AfriPuente</span>
+          <Badge tone="info">Nigeria → Bolivia</Badge>
+        </div>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          Local money. Connected continents.
+        </h1>
+        <p className="mt-4 text-base leading-relaxed text-[var(--muted)]">
+          A Nigerian agency can pay a Bolivian illustrator without either of them touching a
+          crypto exchange. You pay in naira from your bank. Your recipient is paid in bolivianos
+          into their bank account. Stellar carries the value in between.
+        </p>
+      </header>
+
+      <div className="mb-10 flex flex-col gap-3 sm:flex-row">
+        <Link href="/send">
+          <Button size="lg">
+            Send money <ArrowRight size={18} aria-hidden />
+          </Button>
+        </Link>
+        <Link href="/demo">
+          <Button size="lg" variant="secondary">
+            View the guided demo
+          </Button>
+        </Link>
+      </div>
+
+      <p className="mb-10 text-sm text-[var(--muted)]">
+        The guided demo is a <strong>simulated walkthrough</strong> with fictional people. It does
+        not move money and is kept separate from real transfers.
+      </p>
+
+      <section className="mb-10 grid gap-4 sm:grid-cols-3">
+        <Card>
+          <Banknote className="mb-3 text-[var(--teal)]" size={22} aria-hidden />
+          <h2 className="mb-1 text-sm font-semibold">You pay in naira</h2>
+          <p className="text-sm text-[var(--muted)]">
+            A normal Nigerian bank transfer with a reference we give you.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </Card>
+        <Card>
+          <ShieldCheck className="mb-3 text-[var(--teal)]" size={22} aria-hidden />
+          <h2 className="mb-1 text-sm font-semibold">Settled on Stellar</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Value moves as USDC on Stellar, and you authorise the payment yourself.
+          </p>
+        </Card>
+        <Card>
+          <Landmark className="mb-3 text-[var(--teal)]" size={22} aria-hidden />
+          <h2 className="mb-1 text-sm font-semibold">They receive bolivianos</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Paid out in BOB through Pollar&apos;s Bolivian ramp partner.
+          </p>
+        </Card>
+      </section>
+
+      <Card className="mb-10">
+        <h2 className="mb-3 text-sm font-semibold">What this is, plainly</h2>
+        <ul className="space-y-2 text-sm text-[var(--muted)]">
+          <li>
+            The Bolivian payout uses Pollar&apos;s documented BOB corridor. The Nigerian funding
+            leg has no automated provider — it is a documented, manually reconciled partner flow,
+            and the app says so at every step.
+          </li>
+          <li>
+            Each stage of a transfer records how it actually ran: simulated, sandbox, testnet, live
+            or manually verified. A transfer is never described as live because one part of it was.
+          </li>
+          <li>
+            A transfer is only marked complete when the payout provider confirms the recipient was
+            paid — not when the blockchain transaction succeeds.
+          </li>
+        </ul>
+      </Card>
+
+      <footer className="border-t border-[var(--border)] pt-6 text-xs text-[var(--muted)]">
+        <p>
+          Built for the Pollar hackathon. Running on Stellar{' '}
+          <strong>{process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet'}</strong>. Testnet assets
+          are not redeemable for real bolivianos.
+        </p>
+        <nav className="mt-3 flex gap-4">
+          <Link className="underline" href="/activity">
+            Activity
+          </Link>
+          <Link className="underline" href="/operator">
+            Operator
+          </Link>
+        </nav>
+      </footer>
+    </main>
   );
 }
