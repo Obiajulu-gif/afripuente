@@ -2,7 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/lib/env';
-import { db } from '@/lib/db';
+import { db, withDbRetry } from '@/lib/db';
 
 // Server session. The cookie carries only an opaque user id and is signed;
 // authority is ALWAYS re-read from the database, never trusted from the token.
@@ -61,10 +61,14 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { id: true, pollarUserId: true, email: true, role: true },
-  });
+  // Retried: this runs on every authenticated request, so it is the call most
+  // likely to hit a cold database.
+  const user = await withDbRetry(() =>
+    db.user.findUnique({
+      where: { id: userId },
+      select: { id: true, pollarUserId: true, email: true, role: true },
+    }),
+  );
   if (!user) return null;
 
   return {
