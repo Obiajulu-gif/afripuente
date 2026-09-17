@@ -1,0 +1,485 @@
+// AfriPuente — Nigeria → Bolivia remittance corridor
+//
+// Design rules encoded here:
+//  1. Funding, on-chain settlement and fiat payout are THREE INDEPENDENT statuses.
+//     The user-facing timeline is derived from them; there is no single "status" column
+//     that could claim a transfer is complete while money is still moving.
+//  2. Every leg records its own execution mode. A transfer with a real testnet settlement
+//     and a simulated payout can never render as "fully live".
+//  3. All money is stored as integer MINOR UNITS (BigInt) with the currency's precision
+//     recorded explicitly. No floats anywhere in the money path.
+//  4. Uniqueness constraints — not application checks — are what actually prevent
+//     duplicate payments and replayed provider events.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// How a given leg was actually executed. Recorded per leg, never globally.
+enum ExecutionMode {
+  SIMULATED // demo adapter; no external system touched
+  SANDBOX // provider sandbox
+  TESTNET // real SDK call on Stellar testnet — NOT redeemable for real money
+  LIVE // real provider, real money
+  MANUALLY_VERIFIED // a human reconciled it against an external record
+}
+
+enum FundingStatus {
+  AWAITING_FUNDING // instruction issued, nothing received
+  REPORTED // sender claims they paid — NOT proof of anything
+  VERIFIED // an operator independently reconciled the bank receipt
+  MISMATCHED // money arrived but amount/reference does not match
+  REFUND_PENDING
+  REFUNDED
+  FAILED
+}
+
+/// Delivery of the settlement asset to the sender's wallet, and the onward
+/// Stellar payment. These are distinct from funding: a bank deposit does not
+/// create an on-chain balance.
+enum SettlementStatus {
+  NOT_STARTED
+  ASSET_DELIVERY_PENDING // partner has been asked to deliver USDC
+  ASSET_DELIVERED // delivery verified on-chain against wallet/asset/amount
+  AWAITING_AUTHORIZATION // waiting for the sender to authorize the payment
+  SUBMITTED // XDR submitted, outcome not yet known
+  CONFIRMED // verified on Horizon: success, right asset, right destination
+  FAILED
+}
+
+enum PayoutStatus {
+  NOT_STARTED
+  ORDER_CREATED // Pollar ramp order exists
+  KYC_REQUIRED
+  PENDING // provider is processing the BOB payout
+  COMPLETED // provider confirmed the recipient was paid
+  FAILED
+  MANUAL_HANDOFF // a human at the provider is completing this; labelled as such
+}
+
+enum TransferState {
+  DRAFT
+  AWAITING_FUNDING
+  FUNDING_REVIEW
+  SETTLING
+  PAYING_OUT
+  COMPLETED
+  MANUAL_REVIEW
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum ActorType {
+  USER
+  OPERATOR
+  SYSTEM
+  PROVIDER
+}
+
+enum UserRole {
+  SENDER
+  OPERATOR
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id String @id @default(cuid())
+
+  /// Pollar's user id, from the authenticated SDK session. This is the identity
+  /// anchor — not an email, and never a raw wallet address.
+  pollarUserId String  @unique
+  email        String?
+  role         UserRole @default(SENDER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallets   WalletRef[]
+  transfers Transfer[]
+  audits    AuditEvent[] @relation("AuditActor")
+
+  @@index([role])
+}
+
+/// A wallet address that has PROVEN ownership, via a SEP-53 signed nonce.
+/// An unproven address never reaches this table.
+model WalletRef {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  address String
+  chain   String @default("STELLAR")
+  network String @default("testnet")
+
+  /// Proof of ownership. `scheme` is Pollar's, e.g. "sep53".
+  proofScheme    String
+  proofNonce     String   @unique
+  proofSignature String
+  verifiedAt     DateTime
+
+  createdAt DateTime @default(now())
+
+  transfers Transfer[]
+
+  @@unique([userId, address, network])
+  @@index([address])
+}
+
+/// Single-use nonce issued by the server for a SEP-53 ownership proof.
+/// Consumed exactly once; prevents replay of a captured signature.
+model WalletChallenge {
+  id        String   @id @default(cuid())
+  nonce     String   @unique
+  address   String
+  issuedAt  DateTime @default(now())
+  expiresAt DateTime
+  consumedAt DateTime?
+
+  @@index([address, consumedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Quotes
+// ---------------------------------------------------------------------------
+
+model Quote {
+  id String @id @default(cuid())
+
+  /// What the sender pays, in NGN minor units (kobo, precision 2).
+  sendAmountMinor   BigInt
+  sendCurrency      String @default("NGN")
+  sendPrecision     Int    @default(2)
+
+  /// AfriPuente's NGN-side funding/conversion charge, NGN minor units.
+  fundingFeeMinor   BigInt @default(0)
+
+  /// The settlement asset amount, as a decimal STRING with explicit precision.
+  /// Stellar classic assets are 7dp — stored as a string to stay exact.
+  settlementAmount    String
+  settlementAsset     String @default("USDC")
+  settlementIssuer    String?
+  settlementPrecision Int    @default(7)
+  settlementNetwork   String @default("testnet")
+
+  /// NGN → settlement-asset rate applied, as an exact decimal string.
+  ngnToAssetRate String
+
+  /// Payout side, BOB minor units (centavos, precision 2).
+  payoutAmountMinor BigInt
+  payoutCurrency    String @default("BOB")
+  payoutPrecision   Int    @default(2)
+  payoutFeeMinor    BigInt @default(0)
+  networkFeeMinor   BigInt @default(0)
+
+  /// Provider-side quote, when one exists. `providerQuoteId` is Pollar's quoteId.
+  providerQuoteId String?
+  provider        String?
+  providerRate    String?
+  providerRail    String?
+
+  /// TRUE only when a provider guaranteed the rate. Estimated quotes must say so.
+  guaranteed Boolean @default(false)
+
+  /// The NGN leg has no provider quote, so its rate is an operator-set
+  /// indicative rate. Recorded so the UI can label it honestly.
+  ngnRateSource String @default("indicative")
+
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  /// Raw provider payload, retained as evidence.
+  providerPayload Json?
+
+  transfer Transfer?
+
+  @@index([providerQuoteId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Transfers
+// ---------------------------------------------------------------------------
+
+model Transfer {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  walletRefId String?
+  walletRef   WalletRef? @relation(fields: [walletRefId], references: [id])
+
+  /// Idempotency: a retried create with the same key returns the same transfer
+  /// instead of making a second one. Enforced by the database, not by a check.
+  idempotencyKey String @unique
+
+  /// Human-facing reference, also used as the bank transfer narration.
+  reference String @unique
+
+  quoteId String? @unique
+  quote   Quote?  @relation(fields: [quoteId], references: [id])
+
+  // Recipient — only what the payout provider actually asked for, captured from
+  // the quote's requiredFields. Full account details are never exposed publicly.
+  recipientName      String
+  recipientCountry   String @default("BO")
+  recipientCurrency  String @default("BOB")
+  /// Provider-required fields, keyed exactly as `requiredFields[].key`.
+  recipientFields    Json
+  /// Last 4 characters only, for display on receipts.
+  recipientAccountMask String?
+
+  // Three independent statuses.
+  fundingStatus    FundingStatus    @default(AWAITING_FUNDING)
+  settlementStatus SettlementStatus @default(NOT_STARTED)
+  payoutStatus     PayoutStatus     @default(NOT_STARTED)
+
+  /// Derived roll-up, for listing and filtering only. Never the source of truth.
+  state TransferState @default(DRAFT)
+
+  // Execution mode per leg — deliberately three columns.
+  fundingMode    ExecutionMode @default(SIMULATED)
+  settlementMode ExecutionMode @default(SIMULATED)
+  payoutMode     ExecutionMode @default(SIMULATED)
+
+  failureReason String?
+  manualReviewReason String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  funding      FundingRecord?
+  delivery     AssetDelivery?
+  settlement   SettlementTx?
+  payoutOrder  PayoutOrder?
+  events       ProviderEvent[]
+  audits       AuditEvent[]
+
+  @@index([userId, createdAt])
+  @@index([state])
+  @@index([fundingStatus])
+}
+
+// ---------------------------------------------------------------------------
+// Leg 1 — Nigerian funding (AfriPuente-owned, semi-manual)
+// ---------------------------------------------------------------------------
+
+model FundingRecord {
+  id         String   @id @default(cuid())
+  transferId String   @unique
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  /// Unique narration the sender must put on the bank transfer.
+  fundingReference String @unique
+
+  expectedAmountMinor BigInt
+  currency            String @default("NGN")
+  precision           Int    @default(2)
+
+  /// The sender pressing "I have paid". Explicitly NOT proof.
+  reportedAt          DateTime?
+  reportedAmountMinor BigInt?
+
+  /// Independent operator reconciliation against the bank record.
+  verifiedAt          DateTime?
+  verifiedByUserId    String?
+  bankReference       String?
+  receivedAmountMinor BigInt?
+  receivedCurrency    String?
+
+  mode ExecutionMode @default(SIMULATED)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One bank reference can fund at most one transfer. This constraint is what
+  /// stops the same deposit evidence being reused across transfers.
+  @@unique([bankReference])
+  @@index([verifiedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Leg 2 — settlement asset delivery + Stellar payment
+// ---------------------------------------------------------------------------
+
+/// The funding partner delivering USDC to the sender's wallet. Verified
+/// on-chain against wallet, network, asset issuer and amount — never assumed
+/// from the fact that a bank deposit cleared.
+model AssetDelivery {
+  id         String   @id @default(cuid())
+  transferId String   @unique
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  expectedAmount String
+  assetCode      String
+  assetIssuer    String?
+  network        String
+  destination    String
+
+  /// On-chain evidence. Unique so one delivery cannot fund two transfers.
+  txHash     String?   @unique
+  verifiedAt DateTime?
+  observedAmount String?
+
+  mode ExecutionMode @default(SIMULATED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// The Stellar payment from the sender's wallet to the ramp's destination.
+model SettlementTx {
+  id         String   @id @default(cuid())
+  transferId String   @unique
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  /// Unique: the same on-chain transaction can never settle two transfers.
+  txHash String? @unique
+
+  network     String
+  assetCode   String
+  assetIssuer String?
+  amount      String
+  destination String
+  memo        String?
+
+  submittedAt DateTime?
+  confirmedAt DateTime?
+  /// Result of INDEPENDENT Horizon verification, not the client's claim.
+  horizonVerifiedAt DateTime?
+  resultCode        String?
+
+  mode ExecutionMode @default(SIMULATED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Leg 3 — Bolivian payout via Pollar ramp
+// ---------------------------------------------------------------------------
+
+model PayoutOrder {
+  id         String   @id @default(cuid())
+  transferId String   @unique
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  /// Pollar's ramp txId. Unique — one ramp order per transfer.
+  providerTxId String @unique
+  provider     String
+
+  anchorTransactionId String?
+  providerStatus      String?
+  kycRequired         Boolean @default(false)
+  kycUrl              String?
+  tosUrl              String?
+
+  /// Where the asset must be sent, as returned by the provider. Resolved
+  /// BEFORE any funds move — never guessed.
+  depositAddress String?
+  depositMemo    String?
+  depositPayload Json?
+
+  /// Set when a human at the provider completes the payout. Surfaced in the UI
+  /// as a labelled handoff, never presented as automated.
+  manualHandoffAt     DateTime?
+  manualHandoffNote   String?
+  manualHandoffEvidence String?
+
+  completedAt DateTime?
+  failureReason String?
+
+  mode ExecutionMode @default(SIMULATED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Evidence and audit
+// ---------------------------------------------------------------------------
+
+/// Every inbound provider signal. `externalId` is unique per provider so a
+/// replayed or duplicated webhook/poll result is ignored rather than reapplied.
+model ProviderEvent {
+  id String @id @default(cuid())
+
+  provider   String
+  externalId String
+  eventType  String
+
+  transferId String?
+  transfer   Transfer? @relation(fields: [transferId], references: [id])
+
+  payload Json
+
+  /// Provider's own ordering signal, when it has one. Lets us drop an
+  /// out-of-order event instead of regressing a status.
+  sequence  Int?
+  occurredAt DateTime?
+
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  /// Set when the event was received but deliberately not applied.
+  ignoredReason String?
+
+  signatureVerified Boolean @default(false)
+
+  @@unique([provider, externalId])
+  @@index([transferId, receivedAt])
+}
+
+model AuditEvent {
+  id String @id @default(cuid())
+
+  actorType   ActorType
+  actorUserId String?
+  actor       User?     @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  action String
+
+  transferId String?
+  transfer   Transfer? @relation(fields: [transferId], references: [id])
+
+  /// Never store PII or full account numbers here.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([transferId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+/// Server-side idempotency for any operation with an external side effect.
+/// Written BEFORE the side effect, so a crash mid-call is detectable.
+model IdempotencyRecord {
+  id String @id @default(cuid())
+
+  key   String @unique
+  scope String
+
+  status     String // 'in_flight' | 'succeeded' | 'failed'
+  resultRef  String?
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+
+  @@index([scope, status])
+}
