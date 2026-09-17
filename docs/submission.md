@@ -63,26 +63,33 @@ never blurred.
 | NGN funding | `SIMULATED` | No partner contracted; sandbox instructions only |
 | Asset delivery | `SIMULATED` | Depends on that partner |
 | Stellar settlement | `TESTNET` | SDK wired; testnet only |
-| BOB payout | `SIMULATED` | Corridor documented, key + origin proven live; live quote not yet observed |
+| BOB payout | `SIMULATED` | **Blocked: no ramp anchors enabled on this application** |
 
-**No real money has moved.** The strongest evidence is a real authenticated
-Pollar response for this project's own application:
+**What works against the live API.** A complete authenticated session on Stellar
+testnet: email OTP → embedded wallet
+`GDCB6KB6DSDR7ML47FB25L6F73OVOCFYQHVQOVN7HTJWG3B2UZPBLOBQ` → **SEP-53 ownership
+proof** → server-side ed25519 verification → session cookie → quote built and
+persisted. A wrong code was also exercised and correctly rejected.
 
-```
-GET /v2/applications/config -> 200
-{"content":{"application":{"name":"AfriPuente","network":"testnet","chains":["STELLAR"]}}}
-```
+**What is blocked.** With that valid session, `GET /ramps/countries` returns
+**zero countries** and every Bolivian quote returns **zero quotes**. The calls
+succeed; no anchor is enabled on this application to quote against.
+
+**No real money has moved.**
 
 Verified by test: **53 unit tests passing**, including 8 that exercise real
-ed25519 SEP-53 signatures rather than mocks. Typecheck, production build and the
-Neon schema push all pass.
+ed25519 SEP-53 signatures rather than mocks, plus **26 Playwright tests** across
+desktop and mobile. Typecheck, production build and the Neon schema push all pass.
 
 ## Remaining blockers, precisely
 
-1. **Authenticated Pollar user session.** Ramp endpoints return
-   `401 SDK_AUTH_INVALID_TOKEN` without one; the publishable key alone is not
-   enough. Needs the browser email-OTP login completed. Blocks the live Bolivian
-   quote, the real `requiredFields`, and any off-ramp order.
+1. **No ramp anchors enabled on this Pollar application.** `GET /ramps/countries`
+   returns `{ "countries": [] }` under a fully authenticated session. Either no
+   ramp provider is configured for the application in the dashboard, or ramps are
+   mainnet-only — the accessible documentation states neither. This single
+   account-level step blocks the live Bolivian quote, the provider's real
+   `requiredFields`, the off-ramp order, and the payout. **It is not a code
+   blocker**, and `/diagnostics` reproduces it in one click.
 2. **No Nigerian funding partner.** Nigeria is absent from Pollar's corridor
    table, so this leg needs a commercial partner who both receives naira and
    delivers USDC. None is contracted, so the leg stays simulated.
@@ -90,6 +97,16 @@ Neon schema push all pass.
    reconciled by polling instead, which is confirmed to exist.
 4. **USDC issuer on testnet** must be read from the app's enabled assets; it is
    deliberately not hardcoded from a symbol match.
+
+### A note on method
+
+The corridor table in Pollar's docs lists Bolivia/BOB, and it would have been easy
+to build the payout leg on that alone and demo a confident-looking flow. Asking
+the API what *this application* can actually do produced a different, less
+flattering answer. That distinction — a provider's capability versus an
+application's enabled configuration — is the single most useful thing this build
+surfaced, and it is why the product reports an empty result instead of a
+plausible one.
 
 ## Custody
 

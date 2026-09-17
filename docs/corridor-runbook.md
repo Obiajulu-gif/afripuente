@@ -149,6 +149,12 @@ the Stellar leg works; it does not prove a payout.
 | NGN funding | `SIMULATED` | No partner contracted. Sandbox instructions only. |
 | Asset delivery | `SIMULATED` | Depends on the funding partner above. |
 | Stellar settlement | `TESTNET` | SDK wired; testnet only. |
-| BOB payout | `SIMULATED` | Corridor documented and origin/key proven; **live quote not yet observed** — needs an authenticated user session. |
+| BOB payout | `SIMULATED` | **Blocked** — this Pollar application has no ramp anchors enabled; `/ramps/countries` returns an empty list under a valid session. |
 
 No leg is live. The application reports exactly this on every transfer.
+
+> **Before blaming the payout code, run `/diagnostics`.** It calls
+> `getRampCountries()` and requests Bolivian quotes across six amounts under the
+> signed-in session, and prints the raw responses. An empty country list means the
+> application has no anchor enabled — no amount, recipient detail or retry will
+> change that. It is fixed in the Pollar dashboard, or by using a mainnet key.

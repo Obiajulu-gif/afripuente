@@ -5,6 +5,7 @@ import { usePollar } from '@pollar/react';
 import { Mail, Wallet } from 'lucide-react';
 import { Button, Card, Field, Input, Notice } from '@/components/ui';
 import { useWalletSignIn } from '@/hooks/use-wallet-signin';
+import { authErrorMessage, usePollarAuthState } from '@/hooks/use-pollar-auth-state';
 
 /**
  * Two-part sign-in.
@@ -18,6 +19,8 @@ import { useWalletSignIn } from '@/hooks/use-wallet-signin';
 export function SignInPanel({ onSignedIn }: { onSignedIn?: () => void }) {
   const { isAuthenticated, wallet, login, getClient, configStatus } = usePollar();
   const { phase, error, signIn } = useWalletSignIn();
+  const authState = usePollarAuthState();
+  const authError = authErrorMessage(authState);
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -96,13 +99,22 @@ export function SignInPanel({ onSignedIn }: { onSignedIn?: () => void }) {
               <Button type="submit" size="lg">
                 Verify
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setStage('email')}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  getClient().cancelLogin();
+                  setCode('');
+                  setStage('email');
+                }}
+              >
                 Use a different email
               </Button>
             </div>
           </form>
         )}
 
+        {authError && <Notice tone="danger" title="Could not sign in">{authError}</Notice>}
         {localError && <Notice tone="danger" title="Could not sign in">{localError}</Notice>}
       </Card>
     );

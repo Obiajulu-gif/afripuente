@@ -238,12 +238,65 @@ therefore an AfriPuente-owned adapter with a documented semi-manual partner flow
 
 | Item | Status | Exact blocker |
 | --- | --- | --- |
-| Live `GET /ramps/countries` response | **BLOCKED** | `401 SDK_AUTH_INVALID_TOKEN` — needs an authenticated user session. Requires completing the email-OTP login in a browser; cannot be reproduced from a script. |
-| Live BOB quote (`country=BO, currency=BOB`) | **BLOCKED** | Same user-session gate. The corridor is documented and the origin/key are proven correct, but **the live quote has not yet been observed**. |
+| Live `GET /ramps/countries` response | **OBSERVED — returns zero countries** | Not an error: a `200` with `countries: []`. This application has **no ramp anchors enabled**. See §5. |
+| Live BOB quote (`country=BO, currency=BOB`) | **OBSERVED — returns zero quotes** | Follows directly from the empty country list. The call succeeds; there is simply no anchor to quote. See §5. |
 | Exact `requiredFields` for Bolivia/Stereum | **UNVERIFIED** | Only observable from a live quote. This is why the recipient form is generated from the response rather than hardcoded. |
 | Testnet vs mainnet ramp availability | **UNVERIFIED** | Real anchors may not operate on testnet. A testnet settlement proves the Stellar leg, **not** a redeemable BOB payout. |
 | USDC issuer on Stellar testnet | **UNVERIFIED** | Must be read from the app's enabled assets (`refreshAssets()`), never hardcoded from a symbol match. |
 | Webhook signature verification | **UNVERIFIED** | Docs mention webhooks in the deferred-flow guide; the signing scheme has not been confirmed. Until it is, status is reconciled by **polling**, which is confirmed to exist (`pollRampTransaction`). |
+
+## 5. The real blocker: this application has no ramp anchors enabled
+
+This is the most important finding in this document, and it was only discovered
+by running the calls rather than trusting the corridor table.
+
+With a **fully authenticated user session** (email OTP completed, SEP-53 wallet
+proof verified), run from `/diagnostics`:
+
+```
+GET /ramps/countries            -> 200, { "countries": [] }     0 countries, Bolivia ABSENT
+BOB offramp quote @ 50 BOB      -> 200, 0 quotes
+BOB offramp quote @ 100 BOB     -> 200, 0 quotes
+BOB offramp quote @ 500 BOB     -> 200, 0 quotes
+BOB offramp quote @ 1,000 BOB   -> 200, 0 quotes
+BOB offramp quote @ 5,000 BOB   -> 200, 0 quotes
+BOB offramp quote @ 10,000 BOB  -> 200, 0 quotes
+```
+
+These are **successful** calls. The SDK works, the session is valid, the
+endpoints respond `200`. There is simply no anchor configured to quote against.
+
+The full application config agrees — it lists no ramp providers:
+
+```json
+{ "content": {
+    "application": { "name": "AfriPuente", "network": "testnet", "chains": ["STELLAR"] },
+    "styles": { "providers": { "google": true, … }, "emailEnabled": true, "embeddedWallets": true }
+} }
+```
+
+### Two candidate causes — neither yet confirmed
+
+1. **No ramp provider is enabled for this application.** Pollar's operator guide
+   describes configuring ramp providers per application in the dashboard. If none
+   is enabled, an empty country list is the expected result.
+2. **Ramps may be mainnet-only.** Real anchors (Stereum, Anclap, …) move real
+   money and plausibly do not operate against Stellar testnet. This application's
+   key is `pub_testnet_`.
+
+The documentation accessible to this project does **not** state whether ramps are
+available on testnet, nor that a provider must be enabled before
+`/ramps/countries` returns rows. Both causes are therefore recorded as
+hypotheses, not conclusions. Resolving this requires either enabling a ramp
+provider on this application in the dashboard, or a mainnet key — both of which
+are account-level actions outside this codebase.
+
+> **Why this matters.** Pollar's published corridor table says Bolivia/BOB is
+> supported, and it is — *as a Pollar capability*. What an individual application's
+> enabled anchors offer is a different question, and the only authoritative answer
+> is `GET /ramps/countries` for that application. Building the payout leg on the
+> documentation alone would have produced a product that confidently claimed a
+> route it could not execute. The app now asks, and reports the empty answer.
 
 ### Honest status of the integration
 

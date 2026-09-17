@@ -30,18 +30,26 @@ This section is deliberately unflattering, because an honest MVP is the point.
 | NGN funding | `SIMULATED` | No partner contracted. Sandbox instructions only. |
 | Settlement asset delivery | `SIMULATED` | Depends on that partner. |
 | Stellar settlement | `TESTNET` | SDK wired; testnet only. |
-| BOB payout | `SIMULATED` | Corridor documented, key + origin proven live; **live quote not yet observed**. |
+| BOB payout | `SIMULATED` | **Blocked: this Pollar application has no ramp anchors enabled.** |
 
-**No real money has moved.** What *is* proven is a real, authenticated Pollar
-call returning this project's own application record:
+**What is proven.** A complete authenticated session against the live Pollar API
+on Stellar testnet — email OTP, an embedded wallet
+(`GDCB6KB6DSDR7ML47FB25L6F73OVOCFYQHVQOVN7HTJWG3B2UZPBLOBQ`), and a **SEP-53
+ownership proof** verified server-side with real ed25519 before any session
+cookie is issued.
 
-```
-GET /v2/applications/config -> 200
-{"content":{"application":{"name":"AfriPuente","network":"testnet","chains":["STELLAR"]}}}
-```
+**What is blocked, and why.** With that valid session, `GET /ramps/countries`
+returns **zero countries**, and every Bolivian quote returns **zero quotes**.
+These calls *succeed* — there is simply no anchor enabled on this application to
+quote against. Pollar's published corridor table does list Bolivia/BOB via
+Stereum, but that is a Pollar capability; what a given application's enabled
+anchors offer is a separate question, and the only authoritative answer is that
+endpoint. The app asks, and reports the empty answer instead of substituting an
+invented rate.
 
-Full evidence, including the negative results that shaped the design, is in
-[`docs/proof-of-usage.md`](docs/proof-of-usage.md).
+**No real money has moved.** Full evidence, including the negative results that
+shaped the design, is in [`docs/proof-of-usage.md`](docs/proof-of-usage.md).
+Run the checks yourself at `/diagnostics` once signed in.
 
 ## Design decisions that matter
 
@@ -76,6 +84,7 @@ src/
     activity/                    The user's transfers
     operator/                    Protected reconciliation queue
     demo/                        Simulated, read-only walkthrough
+    diagnostics/                 Runs real ramp calls and prints raw responses
     api/
       auth/challenge             Issue single-use SEP-53 nonce
       auth/verify                Verify proof, open session
@@ -133,7 +142,7 @@ See [`.env.example`](.env.example). Placeholders only — never commit real keys
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Neon Postgres connection string |
+| `DATABASE_URL` | Neon Postgres connection string. Keep `connection_limit=10&pool_timeout=20` — without it Prisma's small default pool is exhausted in dev (`P2024`) |
 | `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` | Browser SDK key; origin-locked |
 | `POLLAR_SECRET_KEY` | Server-only; never sent to the browser |
 | `POLLAR_APP_ID` | Pollar application id |
@@ -150,11 +159,18 @@ See [`.env.example`](.env.example). Placeholders only — never commit real keys
 ## Verification
 
 ```bash
-npm test          # 53 unit tests
-npm run typecheck
-npm run build
-npm run test:e2e  # Playwright
+npm test          # 53 unit tests (8 use real ed25519 signatures)
+npm run typecheck # passes
+npm run lint      # passes
+npm run build     # passes — 13 routes
+npm run test:e2e  # 26 Playwright tests, desktop + mobile
 ```
+
+Guards exercised against the running app, not just in tests: idempotent transfer
+creation, quote reuse (`409`), duplicate bank deposit (`409`), repeat
+reconciliation (`409`), and an operator's "matches" selection being overridden to
+`MISMATCHED` when the amounts differ. Details in
+[`docs/proof-of-usage.md`](docs/proof-of-usage.md).
 
 ## Limitations
 
@@ -162,9 +178,11 @@ npm run test:e2e  # Playwright
 2. **No Nigerian funding partner is contracted**, so the NGN leg is simulated by
    default. The app shows sandbox instructions that cannot be mistaken for a real
    account, and refuses to run `LIVE` without real partner details.
-3. **The live Bolivian quote has not been observed** — it needs an authenticated
-   Pollar user session (browser email-OTP login). The corridor is documented and
-   the key/origin are proven, but the quote itself is unverified.
+3. **The Bolivian payout cannot run**: this Pollar application has no ramp anchors
+   enabled, so `/ramps/countries` returns an empty list. Either no ramp provider
+   is configured for the application, or ramps are mainnet-only — the accessible
+   documentation states neither, so both remain hypotheses. This is an
+   account-level blocker, not a code one.
 4. **Webhook signature verification is not implemented** — the signing scheme is
    not documented in what was accessible. Status is reconciled by polling, which
    is confirmed to exist (`pollRampTransaction`).
