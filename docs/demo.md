@@ -51,11 +51,24 @@ ownership prompt.
 
 ## 1:05 — The genuine Pollar interaction (40s)
 
-**Show:** the recipient form.
+**Show:** the recipient step, and read the amber notice aloud.
 
-> "These fields aren't a Bolivian bank form I invented. They come from
-> `requiredFields` on Pollar's own quote — the provider tells us what it needs.
-> If Pollar hasn't returned them, the app says so rather than guessing."
+> "The app asked Pollar for a Bolivian quote and got nothing back. So it says so.
+> It does not show a Bolivian bank form, because the provider never told us which
+> fields it needs — and inventing that form is exactly how you build something
+> that looks finished and loses someone's money."
+
+**Do:** open `/diagnostics` and click *Run corridor checks*.
+
+> "This runs the real SDK calls under my signed-in session. `ramps/countries`
+> returns zero countries. Every Bolivian quote, across six amounts, returns zero
+> quotes. These calls succeed — there's just no ramp anchor enabled on this
+> application."
+
+> "Pollar's docs do list Bolivia and bolivianos via Stereum, and that's true as a
+> Pollar capability. What a *particular application's* enabled anchors offer is a
+> different question, and this endpoint is the only authoritative answer. Asking
+> it is the difference between a demo and a product."
 
 **Do:** switch to the terminal.
 
@@ -63,10 +76,10 @@ ownership prompt.
 npm run verify:pollar
 ```
 
-> "This is a real authenticated call to Pollar returning our own application
-> record — name AfriPuente, network testnet, chain Stellar. It also shows the
-> negative results that shaped the design: ramp endpoints reject the secret key
-> by type, and require a user session, not just an API key."
+> "And this is a real authenticated call returning our own application record —
+> name AfriPuente, network testnet, chain Stellar. It also captures the negative
+> results that shaped the design: ramp endpoints reject the secret key by type,
+> and need a user session, not just an API key."
 
 ---
 
@@ -119,9 +132,10 @@ npm run verify:pollar
 ## 2:55 — Close (15s)
 
 > "Nigeria to Bolivia, with every stage traceable and nothing overstated. No real
-> money has moved yet: there's no Nigerian funding partner contracted, and the
-> live Bolivian quote needs an authenticated session we haven't completed. Both
-> are documented as blockers rather than papered over."
+> money has moved. Two things block that: no Nigerian funding partner is
+> contracted, and this Pollar application has no ramp anchors enabled — which is
+> one setting away, and which the app told us rather than us assuming. Both are
+> documented as blockers rather than papered over."
 
 ---
 
