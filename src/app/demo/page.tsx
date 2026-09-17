@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { ArrowLeft, Check, Clock, CircleDashed } from 'lucide-react';
 import { Badge, Card, Notice, Row } from '@/components/ui';
 
@@ -8,11 +8,13 @@ import { Badge, Card, Notice, Row } from '@/components/ui';
 // database. A demo control must never mutate a live transfer or bypass a
 // payment check, so the simplest safe design is to have no such control at all.
 
-export const metadata = { title: 'Guided demo — AfriPuente' };
+// The root layout applies the "%s â€” AfriPuente" template, so this is the bare
+// page name â€” repeating the brand here would render it twice.
+export const metadata = { title: 'Guided demo' };
 
 export default function DemoPage() {
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
+    <main id="main" className="mx-auto max-w-2xl px-4 py-10">
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--muted)]">
         <ArrowLeft size={16} aria-hidden /> Home
       </Link>
@@ -42,14 +44,14 @@ export default function DemoPage() {
 
       <Card className="mb-6">
         <h2 className="mb-3 text-sm font-semibold">The quote Adaeze sees</h2>
-        <Row label="She sends" value="₦250,000.00" />
-        <Row label="Funding charge (1.5%)" value="₦3,750.00" />
+        <Row label="She sends" value="â‚¦250,000.00" />
+        <Row label="Funding charge (1.5%)" value="â‚¦3,750.00" />
         <Row label="Settles on Stellar as" value="149.2424242 USDC" />
         <div className="mt-2 border-t border-[var(--border)] pt-2">
           <Row label="Valentina receives" value={<strong>Bs 1,038.72</strong>} />
         </div>
         <p className="pt-3 text-xs text-[var(--muted)]">
-          Illustrative figures at an indicative rate of ₦1,650 per USDC and Bs 6.96 per USDC. Real
+          Illustrative figures at an indicative rate of â‚¦1,650 per USDC and Bs 6.96 per USDC. Real
           quotes carry an expiry and say whether a provider guaranteed them.
         </p>
       </Card>
@@ -74,13 +76,13 @@ export default function DemoPage() {
           </Step>
           <Step state="pending" title="USDC is delivered and Adaeze authorises the payment">
             The funding partner delivers USDC to her wallet. That delivery is verified on-chain
-            against the wallet, asset and amount — a cleared bank deposit never invents a balance.
+            against the wallet, asset and amount â€” a cleared bank deposit never invents a balance.
           </Step>
           <Step state="pending" title="Pollar's Bolivian ramp pays Valentina">
             The off-ramp order is created, the asset is sent to the address the provider gives us,
             and the payout is tracked separately from the blockchain transaction.
           </Step>
-          <Step state="pending" title="Completed — only when the provider confirms">
+          <Step state="pending" title="Completed â€” only when the provider confirms">
             A confirmed Stellar transaction is not a completed payout. The transfer is marked
             complete when the provider confirms Valentina was paid.
           </Step>

@@ -42,13 +42,21 @@ function bob(minor: string) {
  * returning user with a valid session cookie is never asked to re-sign the
  * ownership proof after a reload.
  */
-export function SendFlow({ signedIn }: { signedIn: boolean }) {
+export function SendFlow({
+  signedIn,
+  initialAmount = '250000',
+}: {
+  signedIn: boolean;
+  initialAmount?: string;
+}) {
   const router = useRouter();
   const { getClient } = usePollar();
 
   const [step, setStep] = useState<Step>('amount');
 
-  const [amount, setAmount] = useState('250000');
+  // Seeded from the landing-page explorer so the visitor's input survives
+  // signing in.
+  const [amount, setAmount] = useState(initialAmount);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [rampQuote, setRampQuote] = useState<RampQuoteView | null>(null);
   const [rampBlocked, setRampBlocked] = useState<string | null>(null);
@@ -181,10 +189,12 @@ export function SendFlow({ signedIn }: { signedIn: boolean }) {
 
   if (!signedIn) {
     return (
-      <main className="mx-auto max-w-xl px-4 py-10">
+      <main id="main" className="mx-auto max-w-xl px-4 py-10">
         <BackLink />
-        <h1 className="mb-2 text-2xl font-semibold tracking-tight">Send money</h1>
-        <p className="mb-6 text-sm text-[var(--muted)]">
+        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-[var(--text)]">
+          Send money
+        </h1>
+        <p className="mb-6 text-sm text-[var(--text-muted)]">
           Sign in to start. Nigeria → Bolivia.
         </p>
         {/* router.refresh() re-runs the server component, which re-reads the
@@ -198,25 +208,37 @@ export function SendFlow({ signedIn }: { signedIn: boolean }) {
   // if Pollar gave us requiredFields we render exactly those.
   const requiredFields: RequiredField[] = rampQuote?.requiredFields ?? [];
 
-  return (
-    <main className="mx-auto max-w-xl px-4 py-10">
-      <BackLink />
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Send money</h1>
+  const stepIndex = (['amount', 'recipient', 'review'] as Step[]).indexOf(step);
 
-      <ol className="mb-6 flex gap-2 text-xs" aria-label="Progress">
-        {(['amount', 'recipient', 'review'] as Step[]).map((s, i) => (
-          <li key={s} className="flex items-center gap-2">
-            <span
-              className={
-                step === s
-                  ? 'rounded-full bg-[var(--teal)] px-2.5 py-1 text-white'
-                  : 'rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-[var(--muted)]'
-              }
-            >
-              {i + 1}. {s === 'amount' ? 'Amount' : s === 'recipient' ? 'Recipient' : 'Review'}
-            </span>
-          </li>
-        ))}
+  return (
+    <div className="mx-auto max-w-xl">
+      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-[var(--text)]">Send money</h1>
+      <p className="mb-6 text-sm text-[var(--text-muted)]">Nigeria → Bolivia</p>
+
+      {/* Progress. `aria-current` marks the active step for screen readers, and
+          each label is text — not a bare coloured dot. */}
+      <ol className="mb-6 flex flex-wrap gap-2 text-xs" aria-label="Progress">
+        {(['amount', 'recipient', 'review'] as Step[]).map((s, i) => {
+          const done = i < stepIndex;
+          const active = step === s;
+          return (
+            <li key={s}>
+              <span
+                aria-current={active ? 'step' : undefined}
+                className={`inline-flex min-h-8 items-center rounded-full px-3 font-medium ${
+                  active
+                    ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
+                    : done
+                      ? 'bg-[var(--ok-soft)] text-[var(--ok)]'
+                      : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
+                }`}
+              >
+                {i + 1}. {s === 'amount' ? 'Amount' : s === 'recipient' ? 'Recipient' : 'Review'}
+                {done && <span className="sr-only"> (completed)</span>}
+              </span>
+            </li>
+          );
+        })}
       </ol>
 
       {error && (
@@ -339,7 +361,7 @@ export function SendFlow({ signedIn }: { signedIn: boolean }) {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 

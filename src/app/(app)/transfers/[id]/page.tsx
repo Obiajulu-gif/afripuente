@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Check, CircleDashed, Clock, TriangleAlert } from 'lucide-react';
-import { Badge, Card, Details, Notice, Row, type Tone } from '@/components/ui';
+import { Badge, Card, Details, Notice, Row } from '@/components/ui';
 import { ReportFundingButton } from '@/components/report-funding-button';
 import { getSessionUser } from '@/lib/auth/session';
 import { loadTransferForUser } from '@/lib/corridor/transfer-view';
 import { describeMode, type TimelineStep } from '@/lib/corridor/state';
+import { stateLabel as humanState, stateTone } from '@/lib/corridor/presentation';
 
 // Server component: the transfer state lives in the database, so refreshing
 // the page never restarts or loses a transfer.
@@ -200,35 +201,3 @@ function TimelineRow({ step }: { step: TimelineStep }) {
   );
 }
 
-function humanState(state: string): string {
-  switch (state) {
-    case 'AWAITING_FUNDING':
-      return 'Waiting for your payment';
-    case 'FUNDING_REVIEW':
-      return 'Checking your payment';
-    case 'SETTLING':
-      return 'Sending';
-    case 'PAYING_OUT':
-      return 'Recipient payment pending';
-    case 'COMPLETED':
-      return 'Completed';
-    case 'MANUAL_REVIEW':
-      return 'Being reviewed';
-    case 'FAILED':
-      return 'Failed';
-    case 'REFUNDED':
-      return 'Refunded';
-    case 'CANCELLED':
-      return 'Cancelled';
-    default:
-      return state;
-  }
-}
-
-function stateTone(state: string): Tone {
-  if (state === 'COMPLETED') return 'success';
-  if (state === 'FAILED') return 'danger';
-  if (state === 'MANUAL_REVIEW') return 'danger';
-  if (state === 'CANCELLED' || state === 'REFUNDED') return 'neutral';
-  return 'pending';
-}

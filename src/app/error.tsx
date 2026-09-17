@@ -37,7 +37,7 @@ export default function GlobalError({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={reset}
-            className="inline-flex min-h-11 items-center rounded-xl bg-[var(--teal)] px-4 text-sm font-medium text-white hover:bg-[var(--teal-strong)]"
+            className="t-fast inline-flex min-h-11 items-center rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
           >
             Try again
           </button>

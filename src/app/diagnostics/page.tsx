@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { Badge, Button, Card, Notice } from '@/components/ui';
 import { fetchBoliviaOfframpQuotes, fetchSupportedCountries } from '@/lib/pollar/ramp';
 
 // Developer diagnostics. Runs REAL Pollar SDK calls under the signed-in user's
-// session and prints exactly what comes back — including empty results.
+// session and prints exactly what comes back â€” including empty results.
 //
 // This exists because the documented corridor table and what an application's
 // enabled anchors actually offer are two different things. Assuming the former
@@ -40,7 +40,7 @@ export default function DiagnosticsPage() {
       out.push({
         label: 'GET /ramps/countries',
         ok: hasBolivia,
-        detail: `${countries.data.length} countries: ${list || '(none)'} — Bolivia ${hasBolivia ? 'PRESENT' : 'ABSENT'}`,
+        detail: `${countries.data.length} countries: ${list || '(none)'} â€” Bolivia ${hasBolivia ? 'PRESENT' : 'ABSENT'}`,
       });
     }
 
@@ -66,7 +66,7 @@ export default function DiagnosticsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
+    <main id="main" className="mx-auto max-w-2xl px-4 py-10">
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--muted)]">
         <ArrowLeft size={16} aria-hidden /> Home
       </Link>
@@ -77,7 +77,7 @@ export default function DiagnosticsPage() {
       </div>
       <p className="mb-6 text-sm text-[var(--muted)]">
         Runs real Pollar SDK calls under your session and prints the raw response, including empty
-        results. Read-only — it creates nothing.
+        results. Read-only â€” it creates nothing.
       </p>
 
       {!isAuthenticated ? (
@@ -91,7 +91,7 @@ export default function DiagnosticsPage() {
       ) : (
         <Card className="space-y-4">
           <Button onClick={run} disabled={busy}>
-            {busy ? 'Running…' : 'Run corridor checks'}
+            {busy ? 'Runningâ€¦' : 'Run corridor checks'}
           </Button>
 
           {results.map((r) => (

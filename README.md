@@ -78,24 +78,38 @@ Run the checks yourself at `/diagnostics` once signed in.
 ```
 src/
   app/
-    page.tsx                     Landing
-    send/                        Send flow (amount -> recipient -> review)
-    transfers/[id]/              Transfer detail + timeline
-    activity/                    The user's transfers
-    operator/                    Protected reconciliation queue
+    page.tsx                     Landing (dark "night" surface)
     demo/                        Simulated, read-only walkthrough
     diagnostics/                 Runs real ramp calls and prints raw responses
+    (app)/                       Route group — adds NO url segment
+      layout.tsx                 Sidebar + mobile nav shell (signed-in only)
+      dashboard/                 Overview: balance, attention, recent transfers
+      send/                      Send flow (amount -> recipient -> review)
+      activity/                  All transfers, with filters and search
+      transfers/[id]/            Transfer detail + timeline
+      operator/                  Protected reconciliation queue
     api/
       auth/challenge             Issue single-use SEP-53 nonce
       auth/verify                Verify proof, open session
+      auth/logout                Clear the server session
       quotes                     Build a quote (server recomputes every total)
+      quotes/preview             PUBLIC estimate for the landing page
       transfers                  Create (idempotent) / list
       transfers/[id]/report-funding
       operator/transfers/[id]/verify-funding
+  components/
+    ui.tsx                       Buttons, cards, badges, fields, states
+    brand.tsx                    Bridge mark, wordmark, route illustration
+    app-shell/                   Sidebar, mobile nav, account menu
+    dashboard/                   Wallet balance card
+    transfers/transfer-list.tsx  Table on desktop, cards on mobile
+    landing/                     Header and quote explorer
   lib/
     money.ts                     Decimal-safe money
+    nav.ts                       Navigation model (server-safe)
     corridor/quote.ts            Quote construction
     corridor/state.ts            Status derivation, execution modes, timeline
+    corridor/presentation.ts     Plain-language status labels and tones
     corridor/transfer-view.ts    Server-side view assembly + ownership check
     auth/wallet-proof.ts         SEP-53 verification (ed25519)
     auth/session.ts              Signed cookie; role re-read from DB every call
@@ -103,6 +117,22 @@ src/
 prisma/schema.prisma             Data model
 scripts/verify-pollar.ts         Reproducible integration evidence
 ```
+
+### Design system
+
+Two surfaces, one brand. Tokens live in `src/app/globals.css`.
+
+| | Landing (`[data-theme="night"]`) | Dashboard (`:root`) |
+| --- | --- | --- |
+| Background | `#080D19` | `#F5F7FB` |
+| Surface | `#111B2E` | `#FFFFFF` |
+| Primary | Mint `#62F0BC` with **dark** ink `#07121F` | same |
+| Accent | Violet `#9187FF` | same |
+
+Mint always carries dark ink (~11.8:1). Violet is an accent only — never a
+button background with white text, which would fail contrast. Spacing is an 8px
+scale, content is capped at 1200px on the landing page, and status is always
+conveyed by text as well as tone.
 
 **Stack:** Next.js 16 (App Router, Turbopack), TypeScript, Tailwind v4, Prisma +
 Neon Postgres, Zod, `@pollar/core` + `@pollar/react` 0.11.3,
@@ -171,6 +201,42 @@ creation, quote reuse (`409`), duplicate bank deposit (`409`), repeat
 reconciliation (`409`), and an operator's "matches" selection being overridden to
 `MISMATCHED` when the amounts differ. Details in
 [`docs/proof-of-usage.md`](docs/proof-of-usage.md).
+
+## Deployment (Vercel)
+
+The project deploys as a standard Next.js app. Nothing is written to the
+deployment filesystem — accounts and transfers live in Postgres, because a
+serverless filesystem is not a place to keep financial records.
+
+1. **Import the repository** into Vercel. Framework preset: Next.js. Root
+   directory: the repository root. No build command override is needed.
+2. **Set environment variables** for each target (Production and Preview). Copy
+   the names from [`.env.example`](.env.example).
+   - `NEXT_PUBLIC_*` values are exposed to the browser. Only the publishable
+     Pollar key, the base URL, the network and the site URL belong there.
+   - `POLLAR_SECRET_KEY`, `POLLAR_PAT`, `SESSION_SECRET` and `DATABASE_URL` are
+     **server-only**. Never prefix them with `NEXT_PUBLIC_`.
+   - Use a *different* `SESSION_SECRET` per environment so a preview cookie is
+     not valid in production.
+3. **Register the deployed origin with Pollar**: dashboard.pollar.xyz →
+   *Build → Domains*. Add the production domain and any preview domain you will
+   test from. Without this, every SDK call fails `403 ORIGIN_NOT_ALLOWED`, which
+   surfaces in the browser as a CORS error.
+4. **Apply the schema** against the deployment's database once:
+   `DATABASE_URL="…" npx prisma db push`.
+5. **Keep the network honest.** Hosting the site must not silently switch to
+   real money: `NEXT_PUBLIC_STELLAR_NETWORK` stays `testnet` unless a live
+   corridor is actually available. The UI labels the network on the landing
+   page, the dashboard and every transfer.
+
+### Environment targets
+
+| Variable | Production | Preview |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | the production domain | omit — falls back to `VERCEL_URL` |
+| `NEXT_PUBLIC_STELLAR_NETWORK` | `testnet` until a live corridor exists | `testnet` |
+| `SESSION_SECRET` | unique | different from production |
+| `DATABASE_URL` | production database | a separate branch or database if available |
 
 ## Limitations
 

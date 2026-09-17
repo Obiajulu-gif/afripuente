@@ -1,64 +1,192 @@
 @import "tailwindcss";
 
-/* AfriPuente visual language.
-   Warm neutral ground, deep teal for primary actions, amber for pending states.
-   Restrained on purpose: this is a money app, not a marketing page. */
+/* ===========================================================================
+   AfriPuente design tokens
+   ---------------------------------------------------------------------------
+   Two surfaces, one brand:
+     - Landing  : deep navy night surface  -> [data-theme="night"]
+     - Dashboard: light working surface    -> :root default
+   Mint is the primary action colour and ALWAYS carries dark ink (#07121F on
+   #62F0BC is ~11.8:1). Violet is a secondary accent only — never a button
+   background with white text, which would fail contrast.
+   =========================================================================== */
 
 :root {
-  --background: #faf7f2;
-  --surface: #ffffff;
-  --surface-muted: #f4efe7;
-  --foreground: #1c1917;
-  --muted: #6b625a;
-  --border: #e6ded2;
+  /* Brand */
+  --mint: #62f0bc;
+  --mint-strong: #3fdca4;
+  --mint-ink: #07121f; /* text ON mint */
+  --violet: #9187ff;
+  --violet-ink: #2a2260;
 
+  /* Light working surface (dashboard) */
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f8;
+  --text: #0d1729;
+  --text-muted: #5b6678;
+  --line: #dfe5ee;
+
+  --accent: var(--mint);
+  --accent-ink: var(--mint-ink);
+  --accent-hover: var(--mint-strong);
+
+  /* Status — each is paired with text, never colour alone */
+  --ok: #0f7a52;
+  --ok-soft: #e4f6ee;
+  --warn: #8a5a00;
+  --warn-soft: #fdf1dc;
+  --danger: #a12525;
+  --danger-soft: #fbeaea;
+  --info: #1b4f8a;
+  --info-soft: #e6f0fb;
+
+  /* Spacing — 8px scale */
+  --s1: 0.5rem;
+  --s2: 1rem;
+  --s3: 1.5rem;
+  --s4: 2rem;
+  --s5: 3rem;
+  --s6: 4rem;
+
+  /* Radii */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* Shadows — restrained on light, glow on night */
+  --shadow-sm: 0 1px 2px rgb(13 23 41 / 0.06);
+  --shadow-md: 0 4px 16px rgb(13 23 41 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(13 23 41 / 0.10);
+
+  --maxw: 1200px;
+
+  /* --- Legacy aliases -----------------------------------------------------
+     Screens built before this design system read these names. Mapping them
+     keeps those screens correct while the primary surfaces migrate to the
+     semantic tokens above. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --surface-muted: var(--surface-2);
+  --muted: var(--text-muted);
+  --border: var(--line);
   --teal: #0f5257;
   --teal-strong: #0b3f43;
   --teal-soft: #e3efef;
+  --amber: var(--warn);
+  --amber-soft: var(--warn-soft);
+  --success: var(--ok);
+  --success-soft: var(--ok-soft);
+}
 
-  --amber: #a86a12;
-  --amber-soft: #fdf3e2;
+/* Night surface — the landing page */
+[data-theme="night"] {
+  --bg: #080d19;
+  --surface: #111b2e;
+  --surface-2: #17243c;
+  --text: #f3f6fb;
+  --text-muted: #9aa7bd;
+  --line: #22314c;
 
-  --danger: #9a2f2f;
-  --danger-soft: #fbeceb;
+  --ok: #6ee7b7;
+  --ok-soft: #0f2a22;
+  --warn: #f0c274;
+  --warn-soft: #2a2114;
+  --danger: #f2a0a0;
+  --danger-soft: #2b1618;
+  --info: #9cc6f5;
+  --info-soft: #14243a;
 
-  --success: #1f6b45;
-  --success-soft: #e7f2ec;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 28px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 24px 60px rgb(0 0 0 / 0.55);
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --surface-muted: var(--surface-2);
+  --muted: var(--text-muted);
+  --border: var(--line);
+  --teal: var(--mint);
+  --teal-strong: var(--mint-strong);
+  --teal-soft: var(--surface-2);
+  --amber: var(--warn);
+  --amber-soft: var(--warn-soft);
+  --success: var(--ok);
+  --success-soft: var(--ok-soft);
+
+  background: var(--bg);
+  color: var(--text);
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-line: var(--border);
-  --color-teal: var(--teal);
-  --color-teal-strong: var(--teal-strong);
-  --color-teal-soft: var(--teal-soft);
-  --color-amber: var(--amber);
-  --color-amber-soft: var(--amber-soft);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-violet: var(--violet);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
   --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+html {
+  /* Never let a wide table or long address scroll the whole page. */
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Visible focus for keyboard users — never removed. */
+/* Visible keyboard focus everywhere. Never removed. */
 :focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
+}
+[data-theme="night"] :focus-visible {
+  outline-color: var(--mint);
 }
 
-/* Respect a user's reduced-motion preference. */
+/* Numbers in money contexts must not jitter as they change. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Soft brand lighting for the landing hero. Purely decorative, cheap to paint. */
+.glow-mint {
+  background: radial-gradient(60% 60% at 50% 40%, rgb(98 240 188 / 0.18), transparent 70%);
+}
+.glow-violet {
+  background: radial-gradient(55% 55% at 50% 50%, rgb(145 135 255 / 0.16), transparent 70%);
+}
+
+.hairline {
+  border: 1px solid var(--line);
+}
+
+/* Short, purposeful transitions only. */
+.t-fast {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease,
+    opacity 140ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -66,5 +194,11 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+/* Anchor links land below the sticky landing header. */
+[data-theme="night"] :where(section[id]) {
+  scroll-margin-top: 88px;
 }
