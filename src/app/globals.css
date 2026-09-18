@@ -19,27 +19,30 @@
   --violet: #9187ff;
   --violet-ink: #2a2260;
 
-  /* Light working surface (dashboard) */
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-  --surface-2: #eef2f8;
-  --text: #0d1729;
-  --text-muted: #5b6678;
-  --line: #dfe5ee;
+  /* Universal Night Working Surface */
+  --bg: #080d19;
+  --sidebar-bg: #0c2338; /* Rich deep slate-teal matching reference */
+  --surface: #111b2e;
+  --surface-2: #17243c;
+  --surface-hover: #1c2b47;
+  --text: #f3f6fb;
+  --text-muted: #9aa7bd;
+  --line: #22314c;
+  --line-strong: #2d4165;
 
   --accent: var(--mint);
   --accent-ink: var(--mint-ink);
   --accent-hover: var(--mint-strong);
 
-  /* Status — each is paired with text, never colour alone */
-  --ok: #0f7a52;
-  --ok-soft: #e4f6ee;
-  --warn: #8a5a00;
-  --warn-soft: #fdf1dc;
-  --danger: #a12525;
-  --danger-soft: #fbeaea;
-  --info: #1b4f8a;
-  --info-soft: #e6f0fb;
+  /* Status */
+  --ok: #6ee7b7;
+  --ok-soft: #0f2a22;
+  --warn: #f0c274;
+  --warn-soft: #2a2114;
+  --danger: #f2a0a0;
+  --danger-soft: #2b1618;
+  --info: #9cc6f5;
+  --info-soft: #14243a;
 
   /* Spacing — 8px scale */
   --s1: 0.5rem;
@@ -56,53 +59,14 @@
   --r-xl: 24px;
   --r-pill: 999px;
 
-  /* Shadows — restrained on light, glow on night */
-  --shadow-sm: 0 1px 2px rgb(13 23 41 / 0.06);
-  --shadow-md: 0 4px 16px rgb(13 23 41 / 0.08);
-  --shadow-lg: 0 12px 32px rgb(13 23 41 / 0.10);
-
-  --maxw: 1200px;
-
-  /* --- Legacy aliases -----------------------------------------------------
-     Screens built before this design system read these names. Mapping them
-     keeps those screens correct while the primary surfaces migrate to the
-     semantic tokens above. */
-  --background: var(--bg);
-  --foreground: var(--text);
-  --surface-muted: var(--surface-2);
-  --muted: var(--text-muted);
-  --border: var(--line);
-  --teal: #0f5257;
-  --teal-strong: #0b3f43;
-  --teal-soft: #e3efef;
-  --amber: var(--warn);
-  --amber-soft: var(--warn-soft);
-  --success: var(--ok);
-  --success-soft: var(--ok-soft);
-}
-
-/* Night surface — the landing page */
-[data-theme="night"] {
-  --bg: #080d19;
-  --surface: #111b2e;
-  --surface-2: #17243c;
-  --text: #f3f6fb;
-  --text-muted: #9aa7bd;
-  --line: #22314c;
-
-  --ok: #6ee7b7;
-  --ok-soft: #0f2a22;
-  --warn: #f0c274;
-  --warn-soft: #2a2114;
-  --danger: #f2a0a0;
-  --danger-soft: #2b1618;
-  --info: #9cc6f5;
-  --info-soft: #14243a;
-
+  /* Shadows */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 8px 28px rgb(0 0 0 / 0.45);
   --shadow-lg: 0 24px 60px rgb(0 0 0 / 0.55);
 
+  --maxw: 1200px;
+
+  /* Aliases */
   --background: var(--bg);
   --foreground: var(--text);
   --surface-muted: var(--surface-2);
@@ -115,7 +79,52 @@
   --amber-soft: var(--warn-soft);
   --success: var(--ok);
   --success-soft: var(--ok-soft);
+}
 
+/* ===========================================================================
+   Active Sidebar Tab Curved Cutout Notch (matching reference design)
+   =========================================================================== */
+.nav-tab-active {
+  background-color: var(--bg) !important;
+  color: var(--accent) !important;
+  border-top-left-radius: 1.5rem;
+  border-bottom-left-radius: 1.5rem;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: -1rem !important; /* Extends to merge with main background */
+  padding-right: 1.5rem !important;
+  position: relative;
+  z-index: 20;
+}
+
+.nav-tab-active::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  border-bottom-right-radius: 20px;
+  box-shadow: 10px 10px 0 10px var(--bg);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.nav-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 10px -10px 0 10px var(--bg);
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Night theme explicit selector backwards-compatibility */
+[data-theme="night"] {
   background: var(--bg);
   color: var(--text);
 }
@@ -140,24 +149,24 @@
 html {
   /* Never let a wide table or long address scroll the whole page. */
   overflow-x: hidden;
+  background-color: var(--bg);
+  color-scheme: dark;
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  min-height: 100vh;
 }
 
 /* Visible keyboard focus everywhere. Never removed. */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--mint);
   outline-offset: 2px;
   border-radius: var(--r-sm);
-}
-[data-theme="night"] :focus-visible {
-  outline-color: var(--mint);
 }
 
 /* Numbers in money contexts must not jitter as they change. */
@@ -165,7 +174,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Soft brand lighting for the landing hero. Purely decorative, cheap to paint. */
+/* Soft brand lighting. Purely decorative, cheap to paint. */
 .glow-mint {
   background: radial-gradient(60% 60% at 50% 40%, rgb(98 240 188 / 0.18), transparent 70%);
 }
@@ -198,7 +207,6 @@ body {
   }
 }
 
-/* Anchor links land below the sticky landing header. */
-[data-theme="night"] :where(section[id]) {
+:where(section[id]) {
   scroll-margin-top: 88px;
 }
