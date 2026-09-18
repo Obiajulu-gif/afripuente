@@ -95,10 +95,19 @@ export default async function TransferDetailPage({
       {/* Next action */}
       {v.statuses.fundingStatus === 'AWAITING_FUNDING' && v.fundingInstructions && (
         <Card className="mb-6 space-y-4">
-          <h2 className="text-sm font-semibold">Pay by bank transfer</h2>
+          <h2 className="text-sm font-semibold">{v.fundingInstructions.title}</h2>
 
-          {!v.fundingInstructions.isReal && (
-            <Notice tone="danger" title="Sandbox — do not send money">
+          {/* Tone matches the actual risk: red only when there is genuinely
+              nothing to pay, amber for a labelled test account. */}
+          {v.fundingInstructions.warning && (
+            <Notice
+              tone={v.fundingInstructions.tone === 'simulated' ? 'danger' : 'pending'}
+              title={
+                v.fundingInstructions.tone === 'simulated'
+                  ? 'Sandbox — do not send money'
+                  : 'Sandbox test details'
+              }
+            >
               {v.fundingInstructions.warning}
             </Notice>
           )}

@@ -1,6 +1,5 @@
 import 'server-only';
 import { db } from '@/lib/db';
-import { env } from '@/lib/env';
 import { formatMoney, fromMinorUnits } from '@/lib/money';
 import {
   buildTimeline,
@@ -12,6 +11,7 @@ import {
   type PayoutStatus,
   type SettlementStatus,
 } from '@/lib/corridor/state';
+import { buildFundingInstructions } from '@/lib/corridor/funding-instructions';
 
 /**
  * Assemble everything a transfer screen needs, server-side.
@@ -142,27 +142,12 @@ export async function loadTransferForUser(transferId: string, userId: string, is
   };
 }
 
-/**
- * Nigerian funding instructions.
- *
- * In SIMULATED mode these are explicitly sandbox instructions that cannot be
- * mistaken for a real collection account — no plausible-looking account number
- * is ever rendered.
- */
-export function buildFundingInstructions(reference: string) {
-  const live = env.NGN_FUNDING_MODE === 'LIVE';
-  return {
-    mode: env.NGN_FUNDING_MODE,
-    isReal: live,
-    partnerName: live ? env.NGN_PARTNER_NAME : 'SANDBOX — no real partner configured',
-    bankName: live ? env.NGN_PARTNER_BANK : 'SANDBOX — do not send money',
-    accountNumber: live ? env.NGN_PARTNER_ACCOUNT : 'NO ACCOUNT — SANDBOX MODE',
-    reference,
-    warning: live
-      ? null
-      : 'This is a sandbox funding instruction. There is no account to pay and no money will move. Do not attempt a real bank transfer.',
-  };
-}
+// Re-exported so existing call sites keep one import path.
+export {
+  buildFundingInstructions,
+  type FundingInstructions,
+  type FundingTone,
+} from '@/lib/corridor/funding-instructions';
 
 export function formatAsset(amount: string, code: string): string {
   return `${amount} ${code}`;
