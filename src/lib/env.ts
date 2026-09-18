@@ -53,6 +53,32 @@ function load(): Env {
     );
   }
 
+  // The declared Stellar network and the Horizon server must agree.
+  //
+  // This is not cosmetic. Horizon is how the app INDEPENDENTLY verifies that a
+  // settlement really happened: the right asset, destination and amount. Point a
+  // mainnet app at testnet Horizon and every real transaction looks missing,
+  // while a worthless testnet transaction could be offered as proof of a real
+  // payment. A mismatch makes the verification meaningless, so refuse to run.
+  const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet';
+  const horizonIsTestnet = /horizon-testnet\./i.test(parsed.data.STELLAR_HORIZON_URL);
+
+  if (network === 'mainnet' && horizonIsTestnet) {
+    throw new Error(
+      'Network mismatch: NEXT_PUBLIC_STELLAR_NETWORK=mainnet but STELLAR_HORIZON_URL ' +
+        `is a testnet server (${parsed.data.STELLAR_HORIZON_URL}). ` +
+        'Use https://horizon.stellar.org, or settlement verification will look for ' +
+        'real transactions on the test ledger and never find them.',
+    );
+  }
+  if (network !== 'mainnet' && !horizonIsTestnet) {
+    throw new Error(
+      `Network mismatch: NEXT_PUBLIC_STELLAR_NETWORK=${network} but STELLAR_HORIZON_URL ` +
+        `is not a testnet server (${parsed.data.STELLAR_HORIZON_URL}). ` +
+        'Use https://horizon-testnet.stellar.org.',
+    );
+  }
+
   // A LIVE Nigerian funding leg must name a real partner and account, or the UI
   // would render an empty "real" collection account. Fail rather than show one.
   if (parsed.data.NGN_FUNDING_MODE === 'LIVE') {
