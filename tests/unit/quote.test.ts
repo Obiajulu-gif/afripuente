@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildQuote, isQuoteExpired, QuoteError, type ProviderQuote } from '@/lib/corridor/quote';
 import { fromMinorUnits } from '@/lib/money';
+import Decimal from 'decimal.js';
 
 const config = {
   ngnPerUsd: '1650.00',
@@ -116,5 +117,83 @@ describe('quote expiry', () => {
   it('treats the exact expiry instant as expired', () => {
     const at = new Date('2026-09-17T12:00:00Z');
     expect(isQuoteExpired(at, at)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: the real mainnet quote observed from Pollar's Bolivian provider.
+// Captured 2026-09-18 from GET /ramps/quote?country=BO&currency=BOB.
+// ---------------------------------------------------------------------------
+
+const MAINNET_STEREUM_QUOTE: ProviderQuote = {
+  quoteId: 'cmu6qholy00ec0in3qiwr9n23',
+  provider: 'Stereum',
+  fee: 0.14,
+  // NOT USDC. The published corridor table says "USDC on Stellar", but the
+  // provider quotes its fee in USDT. Assuming USDC would reject a real quote.
+  feeCurrency: 'USDT',
+  rate: 10.878260869565217,
+  rail: 'ACH',
+  protocol: 'REST',
+  estimatedTime: '~minutes',
+  recommended: true,
+  minAmount: 1,
+  maxAmount: 69000,
+};
+
+describe('real mainnet provider quote', () => {
+  it('accepts a USDT-denominated fee instead of rejecting it', () => {
+    const q = buildQuote({
+      sendAmountNgn: '250000.00',
+      config,
+      providerQuote: MAINNET_STEREUM_QUOTE,
+    });
+
+    expect(q.guaranteed).toBe(false);
+    expect(q.provider).toBe('Stereum');
+    expect(q.providerRail).toBe('ACH');
+    expect(q.payoutAmountMinor).toBeGreaterThan(0n);
+  });
+
+  it('uses the provider rate, not the indicative one', () => {
+    const q = buildQuote({
+      sendAmountNgn: '250000.00',
+      config,
+      providerQuote: MAINNET_STEREUM_QUOTE,
+    });
+
+    expect(q.payoutRateSource).toBe('provider');
+    expect(new Decimal(q.payoutRate).toNumber()).toBeCloseTo(10.878, 3);
+  });
+
+  it('the real rate is inside the plausibility band, so it is not flagged', () => {
+    const q = buildQuote({
+      sendAmountNgn: '250000.00',
+      config,
+      providerQuote: MAINNET_STEREUM_QUOTE,
+    });
+    expect(q.warnings).toHaveLength(1);
+    expect(q.warnings[0]).toContain('USDT');
+  });
+
+  it('still rejects a fee currency that is genuinely unknown', () => {
+    // Widening to USDT must not turn into "accept anything".
+    expect(() =>
+      buildQuote({
+        sendAmountNgn: '250000.00',
+        config,
+        providerQuote: { ...MAINNET_STEREUM_QUOTE, feeCurrency: 'EUR' },
+      }),
+    ).toThrow(/Unsupported provider fee currency/);
+  });
+
+  it('enforces the provider maximum of 69,000 BOB', () => {
+    expect(() =>
+      buildQuote({
+        sendAmountNgn: '99000000.00',
+        config,
+        providerQuote: MAINNET_STEREUM_QUOTE,
+      }),
+    ).toThrow(/Above the provider maximum/);
   });
 });

@@ -233,9 +233,9 @@ export default async function LandingPage() {
                 <h3 className="text-sm font-semibold text-[var(--text)]">Current status</h3>
                 <dl className="mt-4 space-y-3 text-sm">
                   {[
-                    ['Naira funding', 'Documented partner flow, manually reconciled'],
-                    ['Stellar settlement', `Running on ${NETWORK}`],
-                    ['Boliviano payout', 'Pollar ramp, subject to provider availability'],
+                    ['Naira funding', 'Sandbox reconciliation demo'],
+                    ['Stellar wallet', `Configured for ${NETWORK}`],
+                    ['Boliviano payout', 'Provider quotes; execution not implemented'],
                   ].map(([k, v]) => (
                     <div key={k} className="flex flex-wrap justify-between gap-2">
                       <dt className="text-[var(--text-muted)]">{k}</dt>
@@ -243,6 +243,10 @@ export default async function LandingPage() {
                     </div>
                   ))}
                 </dl>
+                <p className="mt-4 rounded-xl bg-[var(--warn-soft)] p-3 text-xs text-[var(--warn)]">
+                  Demo only: no real naira collection, settlement or bank payout is executed.
+                  Mainnet wallet configuration does not make this a live transfer service.
+                </p>
                 {NETWORK !== 'mainnet' && (
                   <p className="mt-4 rounded-xl bg-[var(--warn-soft)] p-3 text-xs text-[var(--warn)]">
                     This deployment runs on Stellar {NETWORK}. Test assets are not redeemable for
@@ -269,7 +273,7 @@ export default async function LandingPage() {
                 },
                 {
                   q: 'Is the exchange rate guaranteed?',
-                  a: 'The estimate shown before you sign in is not guaranteed. When the payout provider returns a real quote, it is labelled as provider-guaranteed and carries an expiry. If a quote expires before your money arrives, your funds are preserved and you are asked to accept a new quote or take a refund.',
+                  a: 'The total is an estimate. Signed-in users can request a current payout-provider rate, but the naira conversion remains indicative. An expired quote must be refreshed before creating a transfer. Settlement, payouts and refunds are not executed by this MVP.',
                 },
                 {
                   q: 'Do you hold my crypto or my keys?',

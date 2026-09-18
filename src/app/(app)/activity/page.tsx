@@ -14,6 +14,7 @@ export default async function ActivityPage() {
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl py-12">
+        <h1 className="mb-4 text-2xl font-bold tracking-tight">Activity</h1>
         <Card className="border-[var(--line)] bg-[var(--surface)] p-8">
           <EmptyState
             icon={<Inbox size={28} aria-hidden />}

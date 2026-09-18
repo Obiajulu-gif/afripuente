@@ -36,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="px-2 text-[11px] text-[var(--text-muted)] flex items-center justify-between">
               <span>© 2026 AfriPuente</span>
               <span className="inline-flex items-center gap-1 font-mono text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-[var(--accent)]">
-                v0.1.0 • testnet
+                v0.1.0 • {process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet'}
               </span>
             </div>
           </div>

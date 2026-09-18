@@ -69,6 +69,8 @@ export interface QuoteBreakdown {
   providerQuoteId?: string;
   provider?: string;
   providerRail?: string;
+  providerFee?: number;
+  providerFeeCurrency?: string;
 
   expiresAt: Date;
   /** Conditions a human needs to see. Non-empty means do not auto-proceed. */
@@ -88,6 +90,22 @@ export const INDICATIVE_QUOTE_TTL_MS = 10 * 60 * 1000;
  */
 const BOB_PER_USD_MIN = new Decimal('1');
 const BOB_PER_USD_MAX = new Decimal('40');
+
+/**
+ * Fee currencies that are dollar stablecoins, and so are denominated in the
+ * settlement asset rather than in bolivianos.
+ *
+ * Observed on mainnet: Pollar's Bolivian provider (Stereum) quotes its fee in
+ * **USDT**, not USDC, even though the published corridor table says "USDC on
+ * Stellar". Rejecting USDT would have thrown UNSUPPORTED_FEE_CURRENCY and
+ * broken the send flow on the first real quote.
+ *
+ * These are treated as interchangeable for FEE ARITHMETIC only — each is a
+ * dollar-pegged unit and the fee is a small deduction from the same asset. They
+ * are NOT interchangeable as settlement assets. USDT arithmetic below is an
+ * estimate only; the provider must confirm the settlement asset before payment.
+ */
+const DOLLAR_STABLECOINS = new Set(['USDC', 'USDT', 'USD']);
 
 export class QuoteError extends Error {
   constructor(
@@ -150,7 +168,10 @@ export function buildQuote(params: {
 
   if (providerQuote && providerQuote.fee > 0) {
     const feeCurrency = providerQuote.feeCurrency.toUpperCase();
-    if (feeCurrency === 'USDC' || feeCurrency === 'USD') {
+    if (feeCurrency === 'USDT') {
+      warnings.push('Provider fee is in USDT; this USDC estimate assumes dollar parity. Confirm the settlement asset and fee with the provider before any payment.');
+    }
+    if (DOLLAR_STABLECOINS.has(feeCurrency)) {
       assetAfterFee = assetAfterFee.minus(new Decimal(providerQuote.fee));
       if (assetAfterFee.lte(0)) {
         throw new QuoteError('Provider fee exceeds the settlement amount.', 'FEE_EXCEEDS_AMOUNT');
@@ -227,6 +248,8 @@ export function buildQuote(params: {
     providerQuoteId: providerQuote?.quoteId,
     provider: providerQuote?.provider,
     providerRail: providerQuote?.rail,
+    providerFee: providerQuote?.fee,
+    providerFeeCurrency: providerQuote?.feeCurrency,
 
     expiresAt: new Date(now.getTime() + ttl),
     warnings,

@@ -1,6 +1,6 @@
 ﻿import { z } from 'zod';
 import { db } from '@/lib/db';
-import { env, operatorEmails } from '@/lib/env';
+import { env, isOperatorWallet } from '@/lib/env';
 import { ok, parseBody, toErrorResponse, fail } from '@/lib/api';
 import { verifyWalletProof } from '@/lib/auth/wallet-proof';
 import { createSession } from '@/lib/auth/session';
@@ -25,6 +25,10 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     const body = await parseBody(request, schema);
+    const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet';
+    if (body.network !== network) {
+      return fail('NETWORK_MISMATCH', 'Sign in using the configured Stellar network.', 400);
+    }
 
     // 1. The nonce must exist, match the address, be unexpired and unconsumed.
     const challenge = await db.walletChallenge.findUnique({ where: { nonce: body.nonce } });
@@ -58,19 +62,25 @@ export async function POST(request: Request) {
       return fail('CHALLENGE_USED', 'That sign-in request was already used.', 409);
     }
 
-    const email = body.email?.toLowerCase() ?? null;
-    // The operator allowlist is configuration, applied server-side. A client
-    // can never assert its own role.
-    const role = email && operatorEmails().includes(email) ? 'OPERATOR' : 'SENDER';
-
-    const user = await db.user.upsert({
-      where: { pollarUserId: body.pollarUserId },
-      create: { pollarUserId: body.pollarUserId, email, role },
-      // Role is re-applied from the allowlist on every sign-in so removing an
-      // email from the allowlist actually demotes that user.
-      update: { email, role },
-      select: { id: true, role: true },
+    // A SEP-53 signature proves the wallet, NOT a browser-supplied Pollar user
+    // id or email. Recover existing accounts only through their proven wallet.
+    const wallets = await db.walletRef.findMany({
+      where: { address: body.address, network },
+      select: { userId: true },
+      distinct: ['userId'],
     });
+    if (wallets.length > 1) {
+      return fail('AMBIGUOUS_WALLET', 'This wallet needs an account review before sign-in.', 409);
+    }
+    const role = isOperatorWallet(body.address, network) ? 'OPERATOR' : 'SENDER';
+    const user = wallets[0]
+      ? await db.user.update({ where: { id: wallets[0].userId }, data: { role }, select: { id: true, role: true } })
+      : await db.user.upsert({
+          where: { pollarUserId: `wallet:${network}:${body.address}` },
+          create: { pollarUserId: `wallet:${network}:${body.address}`, role },
+          update: { role },
+          select: { id: true, role: true },
+        });
 
     await db.walletRef.upsert({
       where: {

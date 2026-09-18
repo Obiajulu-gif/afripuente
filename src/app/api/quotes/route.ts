@@ -34,7 +34,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireUser();
+    const user = await requireUser();
     const body = await parseBody(request, schema);
 
     const breakdown = buildQuote({
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
 
     const quote = await db.quote.create({
       data: {
+        ownerUserId: user.id,
         sendAmountMinor: breakdown.sendAmountMinor,
         fundingFeeMinor: breakdown.fundingFeeMinor,
         settlementAmount: breakdown.settlementAmount,

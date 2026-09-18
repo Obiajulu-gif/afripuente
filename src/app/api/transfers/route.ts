@@ -41,6 +41,12 @@ export async function POST(request: Request) {
 
     const quote = await db.quote.findUnique({ where: { id: body.quoteId } });
     if (!quote) return fail('UNKNOWN_QUOTE', 'That quote no longer exists.', 404);
+    if (quote.ownerUserId !== user.id) {
+      return fail('FORBIDDEN', 'Get a new quote for your signed-in account.', 403);
+    }
+    if (quote.settlementNetwork !== (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet')) {
+      return fail('NETWORK_MISMATCH', 'Get a new quote for the configured network.', 409);
+    }
     if (quote.acceptedAt) {
       return fail('QUOTE_ALREADY_USED', 'That quote was already used for another transfer.', 409);
     }

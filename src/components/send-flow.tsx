@@ -26,6 +26,8 @@ interface QuoteResponse {
   providerRail?: string;
   expiresAt: string;
   warnings: string[];
+  providerFee?: number;
+  providerFeeCurrency?: string;
 }
 
 function ngn(minor: string) {
@@ -63,6 +65,7 @@ export function SendFlow({
 
   const [recipientName, setRecipientName] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +79,10 @@ export function SendFlow({
     setBusy(true);
     setError(null);
     setRampBlocked(null);
+    setRampQuote(null);
+    setFields({});
+    setSelectedOptions({});
+    idempotencyKeyRef.current = null;
 
     try {
       // 1. Indicative server quote first — this works with no provider at all,
@@ -112,7 +119,7 @@ export function SendFlow({
         // also what you get when the application has no ramp anchors enabled.
         // Do not assert a cause we have not established.
         setRampBlocked(
-          'Pollar returned no Bolivian off-ramp quote. This application currently has no ramp anchors enabled, so no provider rate is available.',
+          'Pollar returned no Bolivian off-ramp quote for this request. Check provider availability and amount limits in corridor diagnostics.',
         );
         setQuote(indicative);
         setStep('recipient');
@@ -289,7 +296,7 @@ export function SendFlow({
                 Pollar has not returned the Bolivian provider&apos;s required fields for this
                 quote, so we cannot show the correct form. We will not guess which bank details
                 the provider needs. You can still create the transfer and add recipient details
-                once the provider quote is available.
+                in this sandbox walkthrough. Recipient editing and payout execution are not yet available.
               </Notice>
             ) : (
               requiredFields.map((f) => (
@@ -297,12 +304,20 @@ export function SendFlow({
                   {f.type === 'select' && f.options ? (
                     <Select
                       id={f.key}
-                      value={fields[f.key] ?? ''}
-                      onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
+                      value={selectedOptions[f.key] ?? ''}
+                      onChange={(e) => {
+                        const index = e.target.value;
+                        setSelectedOptions((p) => ({ ...p, [f.key]: index }));
+                        setFields((p) => ({ ...p, [f.key]: index === '' ? '' : f.options![Number(index)].value }));
+                      }}
                     >
                       <option value="">Select…</option>
-                      {f.options.map((o) => (
-                        <option key={o.value} value={o.value}>
+                      {f.options.map((o, i) => (
+                        // The provider reuses bank codes across entries — "BCP"
+                        // is both YAPE and Banco de Crédito de Bolivia. Keying
+                        // on value alone makes React drop or duplicate options,
+                        // so a sender could pick one bank and submit another.
+                        <option key={`${o.value}-${i}`} value={String(i)}>
                           {o.label}
                         </option>
                       ))}
@@ -324,7 +339,7 @@ export function SendFlow({
               <Button variant="secondary" onClick={() => setStep('amount')}>
                 Back
               </Button>
-              <Button onClick={() => setStep('review')} disabled={recipientName.trim().length < 2}>
+              <Button onClick={() => setStep('review')} disabled={recipientName.trim().length < 2 || requiredFields.some((f) => !f.optional && !fields[f.key]?.trim())}>
                 Review
               </Button>
             </div>
@@ -345,9 +360,9 @@ export function SendFlow({
           </Card>
 
           <Notice tone="pending" title="What happens next">
-            We give you a bank reference. You make a normal naira transfer using it. An operator
-            checks the bank record before anything moves. Nothing is sent to Bolivia until that
-            check passes.
+            This MVP records a transfer and lets an operator demonstrate funding reconciliation.
+            Settlement and Bolivian payout execution are not implemented. Do not send real money
+            for this walkthrough, even though the wallet is configured for mainnet.
           </Notice>
 
           <div className="flex gap-2">
@@ -371,13 +386,16 @@ function QuoteCard({ quote, rampBlocked }: { quote: QuoteResponse; rampBlocked: 
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold">Quote</h2>
         <Badge tone={quote.guaranteed ? 'success' : 'pending'}>
-          {quote.guaranteed ? 'Guaranteed by provider' : 'Estimate only'}
+          {quote.payoutRateSource === 'provider' ? 'Provider rate · estimated total' : 'Estimate only'}
         </Badge>
       </div>
 
       <Row label="You send" value={ngn(quote.sendAmountMinor)} />
       <Row label="Our funding charge" value={ngn(quote.fundingFeeMinor)} />
       <Row label="Settles on Stellar as" value={`${quote.settlementAmount} USDC`} />
+      {quote.providerFee !== undefined && quote.providerFee > 0 && (
+        <Row label="Provider fee (included)" value={`${quote.providerFee} ${quote.providerFeeCurrency}`} />
+      )}
       {Number(quote.payoutFeeMinor) > 0 && (
         <Row label="Payout charge" value={bob(quote.payoutFeeMinor)} />
       )}
@@ -385,6 +403,7 @@ function QuoteCard({ quote, rampBlocked }: { quote: QuoteResponse; rampBlocked: 
         <Row label="Recipient receives" value={<strong>{bob(quote.payoutAmountMinor)}</strong>} />
       </div>
       <p className="pt-2 text-xs text-[var(--muted)]">
+        The NGN conversion and total received remain estimates. No payout has been ordered.{' '}
         Quote expires {new Date(quote.expiresAt).toLocaleTimeString()}.
       </p>
 

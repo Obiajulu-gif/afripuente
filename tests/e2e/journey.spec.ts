@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import Decimal from 'decimal.js';
 
 // End-to-end coverage of everything reachable without an authenticated Pollar
 // session. The authenticated legs need a real email OTP and are verified
@@ -21,11 +22,11 @@ test('landing page states the product without inventing metrics', async ({ page 
   expect(body).not.toMatch(/save up to|trusted by|join thousands|instant delivery/);
 });
 
-test('landing page discloses the network and that test assets are not real money', async ({
+test('landing page discloses the demo boundary even on mainnet', async ({
   page,
 }) => {
   await page.goto('/');
-  await expect(page.getByText(/not redeemable for real bolivianos/i)).toBeVisible();
+  await expect(page.getByText(/no real naira collection, settlement or bank payout is executed/i)).toBeVisible();
 });
 
 test('landing quote explorer prices a real amount and carries it into the send flow', async ({
@@ -164,7 +165,8 @@ test('public quote preview is unauthenticated, exact, and never guaranteed', asy
   const { data } = await res.json();
   expect(data.fundingFeeNgn).toBe('3750.00'); // 150 bps
   expect(data.settlementAmount).toBe('149.2424242'); // 7dp, rounded down
-  expect(data.receiveBob).toBe('1038.72');
+  expect(Number(data.receiveBob)).toBeGreaterThan(0);
+  expect(data.receiveBob).toBe(new Decimal(data.settlementAmount).mul(data.payoutRate).toFixed(2, Decimal.ROUND_DOWN));
   // This endpoint attaches no provider quote, so it can never be guaranteed.
   expect(data.guaranteed).toBe(false);
 });

@@ -68,7 +68,7 @@ export default async function TransferDetailPage({
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Amounts</h2>
             <Badge tone={v.money.guaranteed ? 'success' : 'pending'}>
-              {v.money.guaranteed ? 'Provider guaranteed' : 'Estimate'}
+              {v.money.guaranteed ? 'Provider rate · estimated total' : 'Estimate'}
             </Badge>
           </div>
           <Row label="You send" value={v.money.sendDisplay} />

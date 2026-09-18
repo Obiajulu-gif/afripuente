@@ -34,6 +34,7 @@ const schema = z.object({
   BOB_PER_USD_INDICATIVE: z.string().regex(/^\d+(\.\d+)?$/, 'must be a decimal string'),
 
   OPERATOR_EMAILS: z.string().default(''),
+  OPERATOR_WALLETS: z.string().default(''),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -61,6 +62,18 @@ function load(): Env {
   // while a worthless testnet transaction could be offered as proof of a real
   // payment. A mismatch makes the verification meaningless, so refuse to run.
   const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet';
+  if (network !== 'mainnet' && network !== 'testnet') {
+    throw new Error('NEXT_PUBLIC_STELLAR_NETWORK must be mainnet or testnet.');
+  }
+  for (const [name, prefix] of [
+    ['NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY', 'pub'],
+    ['POLLAR_SECRET_KEY', 'sec'],
+  ] as const) {
+    const key = process.env[name];
+    if (key && !key.startsWith(`${prefix}_${network}_`)) {
+      throw new Error(`Network mismatch: ${name} must be a ${network} key.`);
+    }
+  }
   const horizonIsTestnet = /horizon-testnet\./i.test(parsed.data.STELLAR_HORIZON_URL);
 
   if (network === 'mainnet' && horizonIsTestnet) {
@@ -113,4 +126,9 @@ export function operatorEmails(): string[] {
     .OPERATOR_EMAILS.split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+}
+
+/** Public wallets explicitly authorised by the server operator, never client email claims. */
+export function isOperatorWallet(address: string, network: string): boolean {
+  return load().OPERATOR_WALLETS.split(',').map((v) => v.trim()).includes(`${network}:${address}`);
 }

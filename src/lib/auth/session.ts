@@ -1,14 +1,14 @@
 ﻿import 'server-only';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
-import { env } from '@/lib/env';
+import { env, isOperatorWallet } from '@/lib/env';
 import { db, withDbRetry } from '@/lib/db';
 
 // Server session. The cookie carries only an opaque user id and is signed;
 // authority is ALWAYS re-read from the database, never trusted from the token.
 // In particular the operator role is never taken from the cookie.
 
-const COOKIE_NAME = 'afripuente_session';
+const COOKIE_NAME = 'afripuente_session_v2';
 const MAX_AGE_SECONDS = 60 * 60 * 8;
 
 // Read at call time, not at import: touching env during module evaluation would
@@ -103,5 +103,10 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireOperator(): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== 'OPERATOR') throw new AuthError('Operator access required.', 403);
+  const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet';
+  const wallets = await db.walletRef.findMany({ where: { userId: user.id, network }, select: { address: true } });
+  if (!wallets.some((w) => isOperatorWallet(w.address, network))) {
+    throw new AuthError('Operator wallet is not authorised.', 403);
+  }
   return user;
 }

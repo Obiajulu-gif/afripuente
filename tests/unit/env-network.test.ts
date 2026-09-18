@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const BASE = {
   DATABASE_URL: 'postgresql://u:p@example.neon.tech/db?sslmode=require',
-  POLLAR_SECRET_KEY: 'sec_mainnet_' + 'a'.repeat(32),
+  POLLAR_SECRET_KEY: 'sec_testnet_' + 'a'.repeat(32),
   POLLAR_APP_ID: 'app_test',
   SESSION_SECRET: 'x'.repeat(40),
   NGN_PER_USD_INDICATIVE: '1650.00',
@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 async function loadEnv(overrides: Record<string, string>) {
-  process.env = { ...saved, ...BASE, ...overrides } as NodeJS.ProcessEnv;
+  process.env = { ...saved, ...BASE, POLLAR_SECRET_KEY: `sec_${overrides.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet'}_example`, ...overrides } as NodeJS.ProcessEnv;
   vi.resetModules();
   const mod = await import('@/lib/env');
   // The Proxy validates on first property access.
@@ -34,6 +34,17 @@ async function loadEnv(overrides: Record<string, string>) {
 }
 
 describe('network / Horizon consistency', () => {
+  it('rejects testnet keys on a mainnet deployment', async () => {
+    await expect(loadEnv({ NEXT_PUBLIC_STELLAR_NETWORK: 'mainnet', STELLAR_HORIZON_URL: MAINNET, POLLAR_SECRET_KEY: 'sec_testnet_example' })).rejects.toThrow(/Network mismatch.*POLLAR_SECRET_KEY/);
+  });
+
+  it('rejects a mismatched browser key', async () => {
+    await expect(loadEnv({ NEXT_PUBLIC_STELLAR_NETWORK: 'mainnet', STELLAR_HORIZON_URL: MAINNET, NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY: 'pub_testnet_example' })).rejects.toThrow(/Network mismatch.*PUBLISHABLE_KEY/);
+  });
+
+  it('rejects an unsupported network', async () => {
+    await expect(loadEnv({ NEXT_PUBLIC_STELLAR_NETWORK: 'typo', STELLAR_HORIZON_URL: TESTNET })).rejects.toThrow(/must be mainnet or testnet/);
+  });
   it('accepts mainnet with mainnet Horizon', async () => {
     await expect(
       loadEnv({ NEXT_PUBLIC_STELLAR_NETWORK: 'mainnet', STELLAR_HORIZON_URL: MAINNET }),

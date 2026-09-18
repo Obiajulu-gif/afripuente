@@ -98,8 +98,8 @@ enum UserRole {
 model User {
   id String @id @default(cuid())
 
-  /// Pollar's user id, from the authenticated SDK session. This is the identity
-  /// anchor — not an email, and never a raw wallet address.
+  /// Legacy Pollar id or server-derived wallet:<network>:<address> identity.
+  /// Never populated from an unverified browser identity claim.
   pollarUserId String  @unique
   email        String?
   role         UserRole @default(SENDER)
@@ -158,6 +158,7 @@ model WalletChallenge {
 
 model Quote {
   id String @id @default(cuid())
+  ownerUserId String?
 
   /// What the sender pays, in NGN minor units (kobo, precision 2).
   sendAmountMinor   BigInt
@@ -208,6 +209,7 @@ model Quote {
   transfer Transfer?
 
   @@index([providerQuoteId])
+  @@index([ownerUserId])
   @@index([expiresAt])
 }
 

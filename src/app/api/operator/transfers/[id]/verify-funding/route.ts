@@ -43,6 +43,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // The amounts decide, not the button that was pressed.
     const amountMatches = receivedMinor === expectedMinor;
     const decision = body.decision === 'VERIFIED' && amountMatches ? 'VERIFIED' : 'MISMATCHED';
+    // Reconciliation does not turn a sandbox deposit into real money.
+    const reconciledMode = transfer.funding.mode === 'LIVE' || transfer.funding.mode === 'MANUALLY_VERIFIED'
+      ? 'MANUALLY_VERIFIED' : transfer.funding.mode;
 
     const nextStatuses = {
       fundingStatus: decision as 'VERIFIED' | 'MISMATCHED',
@@ -53,14 +56,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     try {
       await db.$transaction([
         db.fundingRecord.update({
-          where: { transferId: transfer.id },
+          where: { transferId: transfer.id, verifiedAt: null },
           data: {
             verifiedAt: new Date(),
             verifiedByUserId: operator.id,
             bankReference: body.bankReference,
             receivedAmountMinor: receivedMinor,
             receivedCurrency: 'NGN',
-            mode: 'MANUALLY_VERIFIED',
+            mode: reconciledMode,
             notes: body.notes,
           },
         }),
@@ -68,7 +71,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           where: { id: transfer.id },
           data: {
             fundingStatus: decision,
-            fundingMode: 'MANUALLY_VERIFIED',
+            fundingMode: reconciledMode,
             // Funding verified means the asset must now be delivered — a
             // separate, independently verified step.
             settlementStatus:
@@ -99,6 +102,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }),
       ]);
     } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        return fail('ALREADY_VERIFIED', 'Funding for this transfer was already reconciled.', 409);
+      }
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         return fail(
           'BANK_REFERENCE_REUSED',
