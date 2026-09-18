@@ -94,18 +94,40 @@ export function WalletBalanceCard() {
           <Skeleton className="h-4 w-24" />
         </div>
       ) : unreadable ? (
-        <div>
-          <p className="flex items-center gap-2 text-sm font-medium text-[var(--danger)]">
+        <div className="space-y-2">
+          <p className="flex items-center gap-2 text-sm font-medium text-[var(--warn)]">
             <TriangleAlert size={16} aria-hidden />
-            Balance unavailable
+            Wallet not yet activated on Testnet
           </p>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            We could not read your balance just now. This does not mean your balance is zero — your
-            funds are unaffected.
+          <p className="text-xs text-[var(--text-muted)]">
+            New Stellar testnet wallets must be activated with test XLM before balances can be queried on Horizon.
           </p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={() => void refresh()}>
-            <RefreshCw size={14} aria-hidden /> Try again
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {wallet?.address && NETWORK === 'testnet' && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  setRefreshing(true);
+                  try {
+                    await fetch(`https://friendbot.stellar.org?addr=${wallet.address}`);
+                    await new Promise((r) => setTimeout(r, 1500));
+                    await refresh();
+                  } catch {
+                    // refresh handles state
+                  } finally {
+                    setRefreshing(false);
+                  }
+                }}
+                disabled={refreshing}
+              >
+                {refreshing ? 'Funding…' : 'Fund testnet wallet (Friendbot)'}
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={() => void refresh()} disabled={refreshing}>
+              <RefreshCw size={13} aria-hidden className={refreshing ? 'animate-spin' : undefined} /> Try again
+            </Button>
+          </div>
         </div>
       ) : !primary ? (
         <div>
