@@ -8,12 +8,13 @@ The deployment uses **Stellar mainnet wallet configuration** with **sandbox Nige
 
 | Stage | Implemented behavior |
 | --- | --- |
-| Identity | Pollar sign-in and server-verified SEP-53 wallet ownership |
+| Identity | Standard Pollar sign-in modal and server-verified SEP-53 wallet ownership |
 | Quotes | Exact NGN fee arithmetic, indicative NGN conversion, authenticated Pollar BOB quote requests |
 | Recipient | Provider-supplied fields, including bank selection |
 | Funding | Sandbox instructions, sender report, operator reconciliation, duplicate-deposit protection |
-| Settlement | Status model only; asset delivery and payment execution are not implemented |
-| BOB payout | Quote discovery only; off-ramp order creation and payout execution are not implemented |
+| Sandbox payment | Six explicit simulation steps through funding, asset delivery, settlement, processing and a demo receipt |
+| Wallet withdrawal | `/withdraw` opens Pollar's native buy/sell widget for a funded wallet, including provider fields, identity checks and authorization |
+| NGN-to-BOB automation | Nigerian collection/conversion and independently reconciled end-to-end settlement remain unconnected |
 
 No real funds were moved during verification. Mainnet configuration does not establish that a transfer settled or a recipient was paid. Earlier evidence in docs/evidence is historical. A Stereum mainnet quote fixture was supplied with the preceding changes; run /diagnostics while signed in to establish current availability.
 
@@ -77,4 +78,8 @@ Configure production variables, register the origin in Pollar, apply additive sc
 - [Historical integration evidence](docs/proof-of-usage.md)
 - [Corridor design/runbook](docs/corridor-runbook.md)
 
-Remaining live-money work: a Nigerian collection/conversion arrangement, independently verified asset delivery, authoritative provider quote/asset validation, off-ramp ordering, user-authorised settlement, payout reconciliation and failure/refund handling.
+The native wallet withdrawal uses a fresh Pollar quote and supported wallet asset, separately from the corridor estimate. Pollar orders are not synced into sandbox Activity. Automated tests do not execute a live withdrawal or prove bank receipt.
+
+Submission assets: [1024px logo](public/brand/afripuente-icon-1024.png) and [generated submission cover](public/brand/afripuente-submission.png).
+
+Remaining integrated corridor work: Nigerian collection/conversion, independently verified asset delivery, linking funded-wallet orders back to corridor transfers, authoritative payout reconciliation and failure/refund handling.

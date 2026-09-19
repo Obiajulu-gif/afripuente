@@ -97,10 +97,10 @@ export function WalletBalanceCard() {
         <div className="space-y-2">
           <p className="flex items-center gap-2 text-sm font-medium text-[var(--warn)]">
             <TriangleAlert size={16} aria-hidden />
-            Wallet not yet activated on Testnet
+            Wallet balance unavailable
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            New Stellar testnet wallets must be activated with test XLM before balances can be queried on Horizon.
+            We could not read your Stellar {NETWORK} balance. This does not mean your balance is zero. Check your connection and try again.
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {wallet?.address && NETWORK === 'testnet' && (

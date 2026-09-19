@@ -11,6 +11,7 @@ export interface TransferRowData {
   reference: string;
   recipientName: string;
   state: string;
+  mode?: string;
   createdAt: Date;
   sendDisplay: string;
   settleDisplay?: string;
@@ -177,7 +178,7 @@ export function TransferList({
                     </p>
                     <p className="font-mono text-xs text-[var(--text-muted)]">{r.reference}</p>
                   </div>
-                  <StatusBadge label={stateLabel(r.state)} tone={stateTone(r.state)} />
+                  <StatusBadge label={`${r.mode && r.mode !== 'LIVE' ? `${r.mode} · ` : ''}${stateLabel(r.state)}`} tone={stateTone(r.state)} />
                 </div>
                 <div className="mt-3 flex items-end justify-between gap-3">
                   <span className="text-xs text-[var(--text-muted)]">{formatDate(r.createdAt)}</span>
@@ -268,7 +269,7 @@ export function TransferList({
                       {r.receiveDisplay}
                     </td>
                     <td className="py-3.5 pr-4">
-                      <StatusBadge label={stateLabel(r.state)} tone={stateTone(r.state)} />
+                      <StatusBadge label={`${r.mode && r.mode !== 'LIVE' ? `${r.mode} · ` : ''}${stateLabel(r.state)}`} tone={stateTone(r.state)} />
                     </td>
                     <td className="py-3.5 pr-4 text-xs text-[var(--text-muted)]">
                       {formatDate(r.createdAt)}

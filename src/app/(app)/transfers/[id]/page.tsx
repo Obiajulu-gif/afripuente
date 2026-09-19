@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Check, CircleDashed, Clock, TriangleAlert } from 'lucide-react';
 import { Badge, Card, Details, Notice, Row } from '@/components/ui';
 import { ReportFundingButton } from '@/components/report-funding-button';
+import { SimulationControls } from '@/components/simulation-controls';
+import { canSimulate, nextSimulationStep, simulationVersion } from '@/lib/corridor/simulation';
 import { getSessionUser } from '@/lib/auth/session';
 import { loadTransferForUser } from '@/lib/corridor/transfer-view';
 import { describeMode, type TimelineStep } from '@/lib/corridor/state';
@@ -33,6 +35,8 @@ export default async function TransferDetailPage({
   }
 
   const v = result.view;
+  const simulated = canSimulate(result.transfer);
+  const nextDemo = nextSimulationStep(result.transfer);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-10">
@@ -84,7 +88,7 @@ export default async function TransferDetailPage({
       )}
 
       <Card className="mb-6">
-        <h2 className="mb-4 text-sm font-semibold">Progress</h2>
+        <h2 className="mb-4 text-sm font-semibold">{simulated ? 'Simulated progress' : 'Progress'}</h2>
         <ol className="space-y-4">
           {v.timeline.map((step) => (
             <TimelineRow key={step.key} step={step} />
@@ -93,7 +97,8 @@ export default async function TransferDetailPage({
       </Card>
 
       {/* Next action */}
-      {v.statuses.fundingStatus === 'AWAITING_FUNDING' && v.fundingInstructions && (
+      {simulated && (nextDemo || v.statuses.payoutStatus === 'COMPLETED') && <SimulationControls transferId={v.id} version={simulationVersion(v.statuses)} label={nextDemo?.label ?? null} />}
+      {!simulated && v.statuses.fundingStatus === 'AWAITING_FUNDING' && v.fundingInstructions && (
         <Card className="mb-6 space-y-4">
           <h2 className="text-sm font-semibold">{v.fundingInstructions.title}</h2>
 
@@ -131,7 +136,7 @@ export default async function TransferDetailPage({
         </Card>
       )}
 
-      {v.statuses.fundingStatus === 'REPORTED' && (
+      {!simulated && v.statuses.fundingStatus === 'REPORTED' && (
         <div className="mb-6">
           <Notice tone="pending" title="Waiting for us to confirm your bank payment">
             You told us you have paid. An operator is checking the bank record. Nothing moves until

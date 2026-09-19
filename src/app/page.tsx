@@ -235,7 +235,7 @@ export default async function LandingPage() {
                   {[
                     ['Naira funding', 'Sandbox reconciliation demo'],
                     ['Stellar wallet', `Configured for ${NETWORK}`],
-                    ['Boliviano payout', 'Provider quotes; execution not implemented'],
+                    ['Boliviano payout', 'Sandbox walkthrough; separate Pollar wallet withdrawals'],
                   ].map(([k, v]) => (
                     <div key={k} className="flex flex-wrap justify-between gap-2">
                       <dt className="text-[var(--text-muted)]">{k}</dt>
@@ -244,8 +244,9 @@ export default async function LandingPage() {
                   ))}
                 </dl>
                 <p className="mt-4 rounded-xl bg-[var(--warn-soft)] p-3 text-xs text-[var(--warn)]">
-                  Demo only: no real naira collection, settlement or bank payout is executed.
+                  In the corridor demo, no real naira collection, settlement or bank payout is executed.
                   Mainnet wallet configuration does not make this a live transfer service.
+                  {' '}<Link href="/withdraw" className="underline">Funded-wallet withdrawals use Pollar separately.</Link>
                 </p>
                 {NETWORK !== 'mainnet' && (
                   <p className="mt-4 rounded-xl bg-[var(--warn-soft)] p-3 text-xs text-[var(--warn)]">
@@ -273,7 +274,7 @@ export default async function LandingPage() {
                 },
                 {
                   q: 'Is the exchange rate guaranteed?',
-                  a: 'The total is an estimate. Signed-in users can request a current payout-provider rate, but the naira conversion remains indicative. An expired quote must be refreshed before creating a transfer. Settlement, payouts and refunds are not executed by this MVP.',
+                  a: 'The corridor total is an estimate. Signed-in users can request a current payout-provider rate, but naira conversion remains indicative. Refresh an expired quote before creating a transfer. The corridor walkthrough is simulated. For an already-funded wallet, open Wallet withdrawal and review the real asset, fees and payout details in Pollar.',
                 },
                 {
                   q: 'Do you hold my crypto or my keys?',

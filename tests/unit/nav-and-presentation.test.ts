@@ -6,7 +6,7 @@ describe('navigation', () => {
   it('hides the operator workspace from a non-operator', () => {
     const hrefs = navItems(false).map((i) => i.href);
     expect(hrefs).not.toContain('/operator');
-    expect(hrefs).toEqual(['/dashboard', '/send', '/activity']);
+    expect(hrefs).toEqual(['/dashboard', '/send', '/withdraw', '/activity']);
   });
 
   it('shows the operator workspace to an operator', () => {
@@ -14,7 +14,7 @@ describe('navigation', () => {
   });
 
   it('stays small — navigation should not sprawl', () => {
-    expect(navItems(true).length).toBeLessThanOrEqual(4);
+    expect(navItems(true).length).toBeLessThanOrEqual(5);
   });
 });
 

@@ -5,6 +5,7 @@ import { TransferList, type TransferRowData } from '@/components/transfers/trans
 import { getSessionUser } from '@/lib/auth/session';
 import { db, withDbRetry } from '@/lib/db';
 import { formatMoney } from '@/lib/money';
+import { weakestMode } from '@/lib/corridor/state';
 
 export const metadata: Metadata = { title: 'Activity' };
 
@@ -41,6 +42,7 @@ export default async function ActivityPage() {
     reference: t.reference,
     recipientName: t.recipientName,
     state: t.state,
+    mode: weakestMode([t.fundingMode, t.settlementMode, t.payoutMode]),
     createdAt: t.createdAt,
     sendDisplay: t.quote ? formatMoney(t.quote.sendAmountMinor, 'NGN') : '—',
     settleDisplay: t.quote ? `${t.quote.settlementAmount} USDC` : undefined,

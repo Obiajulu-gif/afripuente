@@ -47,9 +47,11 @@ function bob(minor: string) {
 export function SendFlow({
   signedIn,
   initialAmount = '250000',
+  sandbox = true,
 }: {
   signedIn: boolean;
   initialAmount?: string;
+  sandbox?: boolean;
 }) {
   const router = useRouter();
   const { getClient } = usePollar();
@@ -221,6 +223,10 @@ export function SendFlow({
     <div className="mx-auto max-w-xl">
       <h1 className="mb-1 text-2xl font-semibold tracking-tight text-[var(--text)]">Send money</h1>
       <p className="mb-6 text-sm text-[var(--text-muted)]">Nigeria → Bolivia</p>
+      <div className="mb-6"><Notice tone="pending" title={sandbox ? 'Sandbox payment · fictional funds' : 'NGN funding instructions'}>
+        {sandbox ? 'Use fictional recipient details for this walkthrough. Do not send a bank payment.' : 'Confirm funding arrangements with the collection partner before sending money.'}
+        {' '}Already have funds in your wallet? <Link className="underline" href="/withdraw">Withdraw with Pollar</Link>.
+      </Notice></div>
 
       {/* Progress. `aria-current` marks the active step for screen readers, and
           each label is text — not a bare coloured dot. */}
@@ -259,7 +265,7 @@ export function SendFlow({
           <Field
             label="You send (NGN)"
             htmlFor="amount"
-            hint="Naira from your Nigerian bank account."
+            hint={sandbox ? 'Fictional naira amount for the demo.' : 'Naira from your Nigerian bank account.'}
           >
             <Input
               id="amount"
@@ -295,8 +301,8 @@ export function SendFlow({
               <Notice tone="pending" title="Recipient details not yet available">
                 Pollar has not returned the Bolivian provider&apos;s required fields for this
                 quote, so we cannot show the correct form. We will not guess which bank details
-                the provider needs. You can still create the transfer and add recipient details
-                in this sandbox walkthrough. Recipient editing and payout execution are not yet available.
+                the provider needs. You can still demonstrate the sandbox with a fictional recipient name.
+                Real wallet withdrawals collect their details directly in Pollar.
               </Notice>
             ) : (
               requiredFields.map((f) => (
@@ -360,9 +366,7 @@ export function SendFlow({
           </Card>
 
           <Notice tone="pending" title="What happens next">
-            This MVP records a transfer and lets an operator demonstrate funding reconciliation.
-            Settlement and Bolivian payout execution are not implemented. Do not send real money
-            for this walkthrough, even though the wallet is configured for mainnet.
+            {sandbox ? 'Create your sandbox transfer, then simulate funding, settlement and recipient payment one step at a time. No real funds move, even when the wallet uses mainnet.' : 'This records funding instructions. Automatic NGN conversion and settlement are not connected. Wallet withdrawals are available separately through Pollar.'}
           </Notice>
 
           <div className="flex gap-2">

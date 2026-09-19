@@ -95,7 +95,9 @@ export async function POST(request: Request) {
           // comes from configuration, not from a hopeful default.
           fundingMode: env.NGN_FUNDING_MODE === 'LIVE' ? 'LIVE' : env.NGN_FUNDING_MODE,
           settlementMode:
-            (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet') === 'mainnet'
+            env.NGN_FUNDING_MODE === 'SANDBOX' || env.NGN_FUNDING_MODE === 'SIMULATED'
+              ? 'SIMULATED'
+              : (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet') === 'mainnet'
               ? 'LIVE'
               : 'TESTNET',
           // Until a real ramp order exists this is simulated, and says so.

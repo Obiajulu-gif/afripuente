@@ -8,7 +8,7 @@ try { process.loadEnvFile('.env.local'); } catch { /* CI supplies environment di
 
 // Exercise our real HTTP/database path with disposable, locally generated
 // signing keys. This does not simulate or claim a Pollar OTP/browser session.
-test('wallet login, quote ownership, transfer persistence and funding report', async ({ baseURL }) => {
+test('wallet login, ownership, replay protection and complete sandbox journey', async ({ baseURL, browser, viewport, isMobile }) => {
   test.skip(!baseURL?.startsWith('http://localhost:'), 'Disposable data test is local only');
   test.slow();
   const db = new PrismaClient();
@@ -63,6 +63,32 @@ test('wallet login, quote ownership, transfer persistence and funding report', a
     expect(stored.payoutStatus).toBe('NOT_STARTED');
     expect(stored.fundingMode).not.toBe('LIVE');
     expect((await sender.get(`/transfers/${transfer.id}`)).status()).toBe(200);
+    const endpoint = `/api/transfers/${transfer.id}/simulate`;
+    const version = 'REPORTED:NOT_STARTED:NOT_STARTED';
+    expect((await other.post(endpoint, { data: { version } })).status()).toBe(404);
+    await db.transfer.update({ where: { id: transfer.id }, data: { settlementMode: 'LIVE' } });
+    expect((await sender.post(endpoint, { data: { version } })).status()).toBe(409);
+    await db.transfer.update({ where: { id: transfer.id }, data: { settlementMode: 'SIMULATED' } });
+    expect((await sender.post(endpoint, { data: { version } })).status()).toBe(200);
+    expect((await sender.post(endpoint, { data: { version } })).status()).toBe(409);
+    const ui = await browser.newContext({ viewport, isMobile, storageState: await sender.storageState() });
+    try {
+      const page = await ui.newPage();
+      await page.goto(`${baseURL}/transfers/${transfer.id}`);
+      for (const label of ['Simulate asset delivery', 'Simulate Stellar settlement', 'Simulate payout processing', 'Simulate recipient payment']) {
+        await page.getByRole('button', { name: label, exact: true }).click();
+      }
+      await expect(page.getByRole('heading', { name: 'Sandbox receipt' })).toBeVisible({ timeout: 60_000 });
+      await page.reload();
+      await expect(page.getByRole('heading', { name: 'Sandbox receipt' })).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath('sandbox-receipt.png'), fullPage: true });
+      const complete = await db.transfer.findUniqueOrThrow({ where: { id: transfer.id }, include: { settlement: true, payoutOrder: true, delivery: true } });
+      expect(complete.state).toBe('COMPLETED');
+      expect(complete.settlementMode).toBe('SIMULATED');
+      expect(complete.settlement).toBeNull();
+      expect(complete.payoutOrder).toBeNull();
+      expect(complete.delivery).toBeNull();
+    } finally { await ui.close(); }
   } finally {
     // Only records belonging to the randomly generated test identities.
     if (userIds.length) {

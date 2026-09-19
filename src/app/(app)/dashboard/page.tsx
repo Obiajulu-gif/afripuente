@@ -8,6 +8,7 @@ import { TransferList, type TransferRowData } from '@/components/transfers/trans
 import { getSessionUser } from '@/lib/auth/session';
 import { db, withDbRetry } from '@/lib/db';
 import { formatMoney } from '@/lib/money';
+import { weakestMode } from '@/lib/corridor/state';
 import { needsAttention, nextAction, stateLabel, stateTone } from '@/lib/corridor/presentation';
 
 export const metadata: Metadata = { title: 'Dashboard' };
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
     reference: t.reference,
     recipientName: t.recipientName,
     state: t.state,
+    mode: weakestMode([t.fundingMode, t.settlementMode, t.payoutMode]),
     createdAt: t.createdAt,
     sendDisplay: t.quote ? formatMoney(t.quote.sendAmountMinor, 'NGN') : '—',
     settleDisplay: t.quote ? `${t.quote.settlementAmount} USDC` : undefined,
@@ -40,7 +42,7 @@ export default async function DashboardPage() {
   const completed = transfers.filter((t) => t.state === 'COMPLETED').length;
 
   const fundedNgnMinor = transfers
-    .filter((t) => t.fundingStatus === 'VERIFIED' && t.quote)
+    .filter((t) => t.fundingStatus === 'VERIFIED' && ['LIVE', 'MANUALLY_VERIFIED'].includes(t.fundingMode) && t.quote)
     .reduce((sum, t) => sum + (t.quote?.sendAmountMinor ?? 0n), 0n);
 
   const isNew = transfers.length === 0;
@@ -82,8 +84,7 @@ export default async function DashboardPage() {
             <p className="tnum text-3xl font-bold text-[var(--text)]">{transfers.length}</p>
           </div>
           <div className="flex items-center justify-between text-xs text-[var(--text-muted)] pt-2 border-t border-[var(--line)]">
-            <span>{completed} completed</span>
-            <span className="text-[var(--ok)]">{transfers.length > 0 ? `${Math.round((completed / transfers.length) * 100)}% success` : 'Ready'}</span>
+            <span>{completed} completed · includes sandbox demos</span>
           </div>
         </Card>
 

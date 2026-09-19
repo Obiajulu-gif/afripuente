@@ -32,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const transfer = await db.transfer.findUnique({ where: { id }, include: { funding: true } });
     if (!transfer) return fail('NOT_FOUND', 'Transfer not found.', 404);
     if (!transfer.funding) return fail('NO_FUNDING_RECORD', 'This transfer has no funding record.', 409);
-    if (transfer.funding.verifiedAt) {
+    if (transfer.funding.verifiedAt || transfer.fundingStatus === 'VERIFIED' || transfer.settlementStatus !== 'NOT_STARTED' || transfer.payoutStatus !== 'NOT_STARTED') {
       return fail('ALREADY_VERIFIED', 'Funding for this transfer was already reconciled.', 409);
     }
 
@@ -68,7 +68,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           },
         }),
         db.transfer.update({
-          where: { id: transfer.id },
+          where: { id: transfer.id, updatedAt: transfer.updatedAt },
           data: {
             fundingStatus: decision,
             fundingMode: reconciledMode,

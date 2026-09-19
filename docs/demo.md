@@ -4,55 +4,48 @@ Production: https://afripuente.vercel.app
 
 ## Before recording
 
-- Register the production origin in Pollar under Build → Domains.
-- Keep NGN_FUNDING_MODE=SANDBOX. Do not pay a real bank account during the demo.
-- Sign in with Pollar and complete the SEP-53 ownership signature. This update requires one fresh app sign-in. Your configured operator wallet can then open /operator.
-- Run /diagnostics while signed in. Show the actual response; provider availability can change. Do not repeat the old testnet claim that no anchors exist if mainnet returns quotes.
-- Keep /demo open as a read-only fallback if OTP/provider access is unavailable.
-- Use a fictional recipient. Keep OTPs, credentials and real bank details out of the recording.
+- Register the exact app origin in Pollar under Build → Domains.
+- Keep NGN_FUNDING_MODE=SANDBOX. No bank payment is needed for this demo.
+- Open /send, choose **Continue with Pollar**, use an enabled standard sign-in option, then **Continue to AfriPuente** to sign the wallet-ownership message.
+- Use fictional recipient data. Keep OTPs and real account details out of the recording.
+- Create a new transfer. Older records configured for real settlement cannot be advanced by the simulator.
+- /demo remains a public read-only fallback if sign-in is unavailable.
 
 ## 0:00–0:25 — Problem and scope
 
-Show the landing page:
+> AfriPuente connects a Nigeria-to-Bolivia payment workflow with Pollar and Stellar. This recording demonstrates the full sandbox journey. A separate Pollar withdrawal flow is available for an already-funded wallet.
 
-> AfriPuente explores payments from Nigeria to Bolivia: naira funding, Stellar settlement, and boliviano payout. The wallet is configured for mainnet; this MVP demonstrates sandbox funding and reconciliation. No real money moves in this demo.
+## 0:25–1:00 — Sign-in and quote
 
-## 0:25–1:00 — Quote
+Show the standard Pollar sign-in screen, then the account after wallet proof. Enter 250000 under **Send payment** and continue. Show fees, the estimated BOB amount, and any current provider quote. Use fictional recipient data in provider-driven fields. If discovery fails, the labeled estimate still supports the sandbox.
 
-Enter 250000 in the quote explorer. Show the funding fee and estimated BOB amount, then click **Send this payment**. Sign in beforehand to save recording time.
+> Nigerian conversion is indicative. A quote is evidence of pricing, not a completed payment. Pollar handles the exact asset and fees separately for real withdrawals.
 
-> The server calculates monetary amounts precisely. The Nigerian conversion rate is indicative. Signed-in users can request a current Pollar payout-provider rate, but the overall total remains an estimate.
+## 1:00–1:50 — Complete the sandbox
 
-Continue to recipient details. If a quote is available, show the provider, fee currency and generated fields, then fill mandatory fields with demo values. If no quote is returned, show the notice and use the sandbox path. Do not invent a response.
+Review and **Create transfer**. Click these six controls in order:
 
-## 1:00–1:35 — Real SDK evidence
+1. **Simulate bank payment**
+2. **Simulate funding confirmation**
+3. **Simulate asset delivery**
+4. **Simulate Stellar settlement**
+5. **Simulate payout processing**
+6. **Simulate recipient payment**
 
-Open /diagnostics and click **Run corridor checks**.
+Show the **Sandbox receipt**, refresh to demonstrate persistence, and show Activity's SIMULATED label.
 
-> These are real read-only Pollar SDK requests under my authenticated session. They show the countries and Bolivian quotes available to this application today.
+> These are explicit simulations with an audit trail. No deposit, blockchain transaction or bank payout was made. The demo cannot advance a live transfer or fabricate a provider transaction hash.
 
-If USDT fees appear, explain that USDC arithmetic is only an estimate until asset compatibility is confirmed. A quote is not a payout order or proof of settlement.
+## 1:50–2:30 — Real Pollar integration
 
-## 1:35–2:15 — Transfer and sandbox funding
+Open /diagnostics and run the read-only checks. Show current countries and BOB quotes. Then open **Wallet withdrawal**, show the balance and native Pollar widget, and choose **Sell → Bolivia (BOB)** if available.
 
-Return to /send, complete the recipient step, review and create the transfer. Show its reference, sandbox warning and separate status timeline.
+> Real withdrawals use the wallet's supported asset balance. Pollar collects provider details, handles identity checks and asks for authorization. Sandbox payments do not fund the wallet, and withdrawal orders are managed separately in Pollar.
 
-Use **I have made the bank transfer** only as a sandbox demonstration:
+For a no-money demo, stop at the quote/review screen. Do not authorize payment just to record the interface. If you independently choose to execute a real payout, use correct beneficiary details and funds you intend to spend; retain the order reference and wait for provider confirmation and bank receipt before claiming completion.
 
-> This records the sender's claim. It does not prove a deposit or create a wallet balance.
+## 2:30–3:00 — Close
 
-Open /operator with your authorised wallet. Enter a unique demo bank reference such as DEMO-20260918-001 and exactly the quoted NGN amount. Record reconciliation. Explain that a real workflow would require independently checking an actual bank record. Use a new reference for each demo.
+> The submission demonstrates standard Pollar sign-in, verified wallet ownership, provider discovery, a persistent sandbox payment journey and the native funded-wallet withdrawal entry. Full live naira-to-boliviano automation still needs a Nigerian collection/conversion partner and integrated payout reconciliation.
 
-## 2:15–2:45 — Honest result
-
-Refresh the transfer. Funding can be verified within the sandbox; settlement remains pending and payout has not started.
-
-> The database retains the record and audit trail. Reconciliation preserves sandbox mode. The transfer is not completed: asset delivery, settlement and bank-payout execution still need implementation.
-
-If sign-in or operator access is unavailable, show /demo instead. Do not describe its example stages as actual transactions.
-
-## 2:45–3:00 — Close
-
-> The MVP demonstrates authenticated wallet ownership, provider quote discovery, precise pricing and traceable funding reconciliation. Next are a Nigerian collection/conversion partner and verified settlement and payout execution.
-
-Submit the app link, GitHub repository, recording and this scope. Do not claim a completed live NGN-to-BOB payment.
+Submit the app link, GitHub repository, recording and public/brand/afripuente-submission.png. Use public/brand/afripuente-icon-1024.png if the form asks for a square logo.

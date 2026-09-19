@@ -1,5 +1,5 @@
 import 'server-only';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -31,8 +31,13 @@ export async function withDbRetry<T>(fn: () => Promise<T>, attempts = 3): Promis
     try {
       return await fn();
     } catch (err) {
-      const code = (err as { code?: string }).code;
-      if (!code || !TRANSIENT_CODES.has(code)) throw err;
+      const code = (err as { code?: string; errorCode?: string }).code
+        ?? (err as { errorCode?: string }).errorCode;
+      // Prisma's first engine connection can omit P1001 altogether. Match only
+      // its explicit connection-initialization error, not arbitrary failures.
+      const unreachableInitialization = err instanceof Prisma.PrismaClientInitializationError
+        && err.message.includes("Can't reach database server");
+      if (!(code && TRANSIENT_CODES.has(code)) && !unreachableInitialization) throw err;
 
       lastError = err;
       if (attempt < attempts - 1) {

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { SendFlow } from '@/components/send-flow';
 import { getSessionUser } from '@/lib/auth/session';
+import { env } from '@/lib/env';
 
 export const metadata: Metadata = { title: 'Send payment' };
 
@@ -23,5 +24,5 @@ export default async function SendPage({
   const raw = params.amount ?? '';
   const initialAmount = /^\d{1,12}(\.\d{1,2})?$/.test(raw) ? String(Number(raw)) : '250000';
 
-  return <SendFlow signedIn={Boolean(user)} initialAmount={initialAmount} />;
+  return <SendFlow signedIn={Boolean(user)} initialAmount={initialAmount} sandbox={['SANDBOX', 'SIMULATED'].includes(env.NGN_FUNDING_MODE)} />;
 }

@@ -11,7 +11,7 @@ export interface NavItem {
 }
 
 /**
- * Navigation is kept small: three destinations, plus the operator workspace for
+ * Navigation includes the wallet withdrawal path and the operator workspace for
  * operators only. Hiding that entry is presentation — authority is re-checked
  * server-side on the operator page and in every operator API route.
  */
@@ -19,6 +19,7 @@ export function navItems(isOperator: boolean): NavItem[] {
   const items: NavItem[] = [
     { href: '/dashboard', label: 'Overview', icon: 'overview' },
     { href: '/send', label: 'Send payment', icon: 'send' },
+    { href: '/withdraw', label: 'Wallet withdrawal', icon: 'send' },
     { href: '/activity', label: 'Activity', icon: 'activity' },
   ];
   if (isOperator) items.push({ href: '/operator', label: 'Operator', icon: 'operator' });

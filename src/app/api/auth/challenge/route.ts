@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { db, withDbRetry } from '@/lib/db';
 import { ok, parseBody, toErrorResponse, fail } from '@/lib/api';
 import { isValidStellarAddress } from '@/lib/auth/wallet-proof';
 
@@ -27,14 +27,18 @@ export async function POST(request: Request) {
 
     const nonce = `AfriPuente sign-in\naddress: ${address}\nnonce: ${randomBytes(24).toString('hex')}\nissued: ${new Date().toISOString()}`;
 
-    const challenge = await db.walletChallenge.create({
-      data: {
+    // The same server-generated nonce makes a retry idempotent, including a
+    // lost response after the first insert. Client input cannot select it.
+    const challenge = await withDbRetry(() => db.walletChallenge.upsert({
+      where: { nonce },
+      update: {},
+      create: {
         nonce,
         address,
         expiresAt: new Date(Date.now() + CHALLENGE_TTL_MS),
       },
       select: { nonce: true, expiresAt: true },
-    });
+    }));
 
     return ok(challenge);
   } catch (err) {

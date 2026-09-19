@@ -188,13 +188,24 @@ test('primary actions meet the minimum touch target size', async ({ page }) => {
 
 test('no page-level horizontal scrolling on public pages', async ({ page }) => {
   test.slow();
-  for (const path of ['/', '/demo', '/send', '/activity']) {
+  for (const path of ['/', '/demo', '/send', '/activity', '/withdraw']) {
     await page.goto(path);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     );
     expect(overflow, `${path} should not scroll horizontally`).toBe(false);
   }
+});
+
+test('wallet withdrawal requires Pollar sign-in and discloses real funds', async ({ page }) => {
+  await page.goto('/withdraw');
+  await expect(page.getByRole('heading', { name: 'Withdraw from your wallet' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Pollar withdrawal' })).toBeDisabled();
+  await expect(page.getByText(/A sandbox NGN transfer does not fund this wallet/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue with Pollar', exact: true })).toBeVisible({ timeout: 45000 });
+  await page.getByRole('button', { name: 'Continue with Pollar', exact: true }).click();
+  await expect(page.locator('.pollar-modal')).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('pollar-standard-sign-in.png'), fullPage: true });
 });
 
 test('mobile menu opens, lists links, and closes on Escape', async ({ page, isMobile }) => {
